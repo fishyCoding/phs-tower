@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,6 +10,9 @@ void main() async {
     url: 'https://yusjougmsdnhcsksadaw.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1c2pvdWdtc2RuaGNza3NhZGF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDU1NzI4NzQsImV4cCI6MTk2MTE0ODg3NH0.DHLgiswzK6Y_z5_mXAkRn1xy60zvhdb_iQH5gAyJorg',
   );
+  // Cache up to 1000 images, 500 MB
+  PaintingBinding.instance.imageCache.maximumSize = 1000;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024; // 500 MB
   runApp(const PHSTowerApp());
 }
 
@@ -451,11 +455,10 @@ class _NewsScreenState extends State<NewsScreen> {
               leading: imgUrl != null && imgUrl.isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: imgUrl,
+                      child: Image.network(
+                        imgUrl,
                         width: 90, height: 90, fit: BoxFit.cover,
-                        placeholder: (_, __) => _placeholderImage(),
-                        errorWidget: (_, __, ___) => _placeholderImage(),
+                        errorBuilder: (_, __, ___) => _placeholderImage(),
                       ),
                     )
                   : _placeholderImage(),
@@ -536,12 +539,9 @@ class _LargeArticleCard extends StatelessWidget {
           child: Stack(
             children: [
               imgUrl != null && imgUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imgUrl,
+                  ? Image.network(imgUrl,
                       width: double.infinity, height: 220, fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(height: 220, color: Colors.grey[300],
-                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                      errorWidget: (_, __, ___) => Container(height: 220, color: Colors.grey[300],
+                      errorBuilder: (_, __, ___) => Container(height: 220, color: Colors.grey[300],
                           child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey)),
                     )
                   : Container(height: 220, color: Colors.grey[300],
@@ -625,13 +625,9 @@ class _SidescrollRow extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   if (imgUrl != null && imgUrl.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: imgUrl, fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(color: Colors.grey[300],
-                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                      errorWidget: (_, __, ___) =>
-                          const Icon(Icons.image_not_supported, color: Colors.grey),
-                    )
+                    Image.network(imgUrl, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.image_not_supported, color: Colors.grey))
                   else
                     const Icon(Icons.article, color: Colors.grey, size: 40),
                   Positioned.fill(
@@ -720,12 +716,9 @@ class _ArticleScreenState extends State<ArticleScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if ((_article!['img'] as String?)?.isNotEmpty == true)
-                        CachedNetworkImage(
-                          imageUrl: _article!['img'],
+                        Image.network(_article!['img'],
                           width: double.infinity, height: 220, fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(height: 220, color: Colors.grey[200],
-                              child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                         ),
                       Padding(
                         padding: const EdgeInsets.all(16),
