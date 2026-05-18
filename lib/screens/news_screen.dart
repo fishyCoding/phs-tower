@@ -20,10 +20,6 @@ class NewsScreenState extends State<NewsScreen> {
   String? _layoutScript;
   Map<int, Article> _articleCache = {};
 
-  final List<String> _categories = [
-    'All', 'News-Features', 'Sports', 'Opinions', 'Arts-Entertainment',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -58,7 +54,9 @@ class NewsScreenState extends State<NewsScreen> {
           .order('year', ascending: false)
           .order('month', ascending: false);
 
-      final list = (response as List).map((m) => Article.fromMap(Map<String, dynamic>.from(m))).toList();
+      final list = (response as List)
+          .map((m) => Article.fromMap(Map<String, dynamic>.from(m)))
+          .toList();
 
       final cache = <int, Article>{};
       if (_selectedCategory == 'All' && list.isNotEmpty) {
@@ -66,30 +64,46 @@ class NewsScreenState extends State<NewsScreen> {
         final months = <(int, int)>[];
         for (final a in list) {
           final key = '${a.year}-${a.month}';
-          if (!seen.contains(key)) { seen.add(key); months.add((a.year, a.month)); }
+          if (!seen.contains(key)) {
+            seen.add(key);
+            months.add((a.year, a.month));
+          }
         }
         final keepMonths = months.take(4).toSet();
         for (final a in list) {
           if (keepMonths.contains((a.year, a.month))) cache[a.id] = a;
         }
       } else {
-        for (final a in list) { cache[a.id] = a; }
+        for (final a in list) cache[a.id] = a;
       }
 
-      setState(() { _articles = list; _articleCache = cache; _loading = false; });
+      setState(() {
+        _articles = list;
+        _articleCache = cache;
+        _loading = false;
+      });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
   void selectCategory(String category) {
-    setState(() { _selectedCategory = category; _loading = true; _error = null; });
+    setState(() {
+      _selectedCategory = category;
+      _loading = true;
+      _error = null;
+    });
     _fetchArticles();
   }
 
   String _monthName(int month) {
-    const months = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
     return month >= 1 && month <= 12 ? months[month] : '';
   }
 
@@ -98,54 +112,71 @@ class NewsScreenState extends State<NewsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: 50,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final cat = _categories[index];
-                final isSelected = cat == _selectedCategory;
-                return GestureDetector(
-                  onTap: () => selectCategory(cat),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(cat,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 13,
-                        )),
-                  ),
-                );
-              },
-            ),
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: _buildMasthead(),
           ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? Center(child: Text('Error: $_error'))
-                  : _selectedCategory == 'All' && _layoutScript != null
-                      ? _buildLayoutView()
-                      : _buildListView(),
-        ),
-      ],
+          const Divider(height: 1, color: Color(0xFFE0E0E0)),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(child: Text('Error: $_error'))
+                    : _selectedCategory == 'All' && _layoutScript != null
+                        ? _buildLayoutView()
+                        : _buildListView(),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _buildMasthead() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'The Tower',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A2E),
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Princeton High School Student Newspaper',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+            ),
+          ),
+          if (_selectedCategory != 'All') ...[
+            const SizedBox(height: 8),
+            Text(
+              _selectedCategory.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Layout view ────────────────────────────────────────────────────────────
 
   Widget _buildLayoutView() {
     if (_articles.isEmpty) return const SizedBox.shrink();
@@ -159,16 +190,24 @@ class NewsScreenState extends State<NewsScreen> {
       if (line.startsWith('LargeArticle(')) {
         final id = int.tryParse(line.replaceAll(RegExp(r'[^0-9]'), ''));
         if (id != null && _articleCache.containsKey(id)) {
-          widgets.add(LargeArticleCard(
+          widgets.add(HeroArticleCard(
             article: _articleCache[id]!,
             latestYear: _latestYear,
             latestMonth: _latestMonth,
           ));
         }
       } else if (line.startsWith('Sidescroll(')) {
-        final inner = line.substring('Sidescroll('.length, line.lastIndexOf(')'));
-        final ids = inner.split(',').map((s) => int.tryParse(s.trim())).whereType<int>().toList();
-        final articles = ids.where((id) => _articleCache.containsKey(id)).map((id) => _articleCache[id]!).toList();
+        final inner = line.substring(
+            'Sidescroll('.length, line.lastIndexOf(')'));
+        final ids = inner
+            .split(',')
+            .map((s) => int.tryParse(s.trim()))
+            .whereType<int>()
+            .toList();
+        final articles = ids
+            .where((id) => _articleCache.containsKey(id))
+            .map((id) => _articleCache[id]!)
+            .toList();
         if (articles.isNotEmpty) {
           widgets.add(SidescrollRow(
             articles: articles,
@@ -178,23 +217,22 @@ class NewsScreenState extends State<NewsScreen> {
         }
       } else if (line == 'Divider') {
         widgets.add(const Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Divider(thickness: 1, color: Colors.black26),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Divider(height: 1, color: Color(0xFFE0E0E0)),
         ));
       } else if (line.startsWith('Text(')) {
         final match = RegExp(r'Text\("(.+)"\)').firstMatch(line);
         if (match != null) {
           widgets.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(match.group(1)!.toUpperCase(),
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                        letterSpacing: 1.8, color: Colors.black54)),
-                const SizedBox(height: 4),
-                Container(height: 2, width: 32, color: Colors.black87),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              match.group(1)!,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+                letterSpacing: 0.2,
+              ),
             ),
           ));
         }
@@ -204,14 +242,19 @@ class NewsScreenState extends State<NewsScreen> {
     return ListView(children: widgets);
   }
 
+  // ── List view ──────────────────────────────────────────────────────────────
+
   Widget _buildListView() {
-    if (_articles.isEmpty) return const Center(child: Text('No articles found.'));
+    if (_articles.isEmpty) {
+      return const Center(child: Text('No articles found.'));
+    }
 
     final List<dynamic> listItems = [];
     bool dividerInserted = false;
 
     for (final article in _articles) {
-      final isLatest = article.year == _latestYear && article.month == _latestMonth;
+      final isLatest =
+          article.year == _latestYear && article.month == _latestMonth;
       if (!isLatest && !dividerInserted) {
         listItems.add('divider');
         dividerInserted = true;
@@ -225,22 +268,28 @@ class NewsScreenState extends State<NewsScreen> {
         final item = listItems[index];
 
         if (item == 'divider') {
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(children: [
-              const Expanded(child: Divider(thickness: 1.5)),
+              const Expanded(child: Divider()),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('Earlier Issues',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                child: Text(
+                  'Earlier Issues',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                      fontWeight: FontWeight.w500),
+                ),
               ),
-              const Expanded(child: Divider(thickness: 1.5)),
+              const Expanded(child: Divider()),
             ]),
           );
         }
 
         final article = item as Article;
-        final isLatest = article.year == _latestYear && article.month == _latestMonth;
+        final isLatest =
+            article.year == _latestYear && article.month == _latestMonth;
 
         bool showHeader = false;
         if (index == 0) {
@@ -249,7 +298,9 @@ class NewsScreenState extends State<NewsScreen> {
           final prev = listItems[index - 1];
           if (prev == 'divider') {
             showHeader = true;
-          } else if (prev is Article && (prev.year != article.year || prev.month != article.month)) {
+          } else if (prev is Article &&
+              (prev.year != article.year ||
+                  prev.month != article.month)) {
             showHeader = true;
           }
         }
@@ -259,58 +310,112 @@ class NewsScreenState extends State<NewsScreen> {
           children: [
             if (showHeader)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                 child: Row(children: [
-                  Text('${_monthName(article.month)} ${article.year}',
-                      style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.bold,
-                        color: isLatest ? Theme.of(context).colorScheme.primary : Colors.grey[600],
-                      )),
+                  Text(
+                    '${_monthName(article.month)} ${article.year}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isLatest
+                          ? const Color(0xFF1A1A2E)
+                          : Colors.grey[500],
+                    ),
+                  ),
                   if (isLatest) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(10),
+                        color: const Color(0xFF1A1A2E),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('Latest',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'Latest',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ]),
               ),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              leading: article.img.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(article.img,
-                          width: 90, height: 90, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder()),
-                    )
-                  : _placeholder(),
-              title: Text(article.title,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text('${article.authors.join(', ')} · ${article.category}',
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => ArticleScreen(articleId: article.id))),
+            _ArticleListTile(
+              article: article,
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          ArticleScreen(articleId: article.id))),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
           ],
         );
       },
     );
   }
+}
 
-  Widget _placeholder() => Container(
-      width: 90, height: 90,
-      decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)),
-      child: const Icon(Icons.article, color: Colors.grey, size: 32));
+// ── Article list tile (no image, clean text layout) ───────────────────────────
+
+class _ArticleListTile extends StatelessWidget {
+  final Article article;
+  final VoidCallback onTap;
+
+  const _ArticleListTile({required this.article, required this.onTap});
+
+  String _catLabel(String cat) {
+    switch (cat.toLowerCase()) {
+      case 'news-features': return 'News';
+      case 'arts-entertainment': return 'Arts';
+      default: return cat;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _catLabel(article.category).toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+                color: Color(0xFF666666),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              article.title,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A1A2E),
+                height: 1.3,
+              ),
+            ),
+            if (article.authors.isNotEmpty) ...[
+              const SizedBox(height: 5),
+              Text(
+                article.authors.join(', '),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
