@@ -9,10 +9,10 @@ class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
 
   @override
-  State<NewsScreen> createState() => _NewsScreenState();
+  State<NewsScreen> createState() => NewsScreenState();
 }
 
-class _NewsScreenState extends State<NewsScreen> {
+class NewsScreenState extends State<NewsScreen> {
   List<Article> _articles = [];
   bool _loading = true;
   String? _error;
@@ -29,6 +29,8 @@ class _NewsScreenState extends State<NewsScreen> {
     super.initState();
     _loadData();
   }
+
+  String get selectedCategory => _selectedCategory;
 
   Future<void> _loadData() async {
     await Future.wait([_fetchArticles(), _loadLayout()]);
@@ -80,7 +82,7 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
-  void _selectCategory(String category) {
+  void selectCategory(String category) {
     setState(() { _selectedCategory = category; _loading = true; _error = null; });
     _fetchArticles();
   }
@@ -110,7 +112,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 final cat = _categories[index];
                 final isSelected = cat == _selectedCategory;
                 return GestureDetector(
-                  onTap: () => _selectCategory(cat),
+                  onTap: () => selectCategory(cat),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 14),
