@@ -121,7 +121,7 @@ class NewsScreenState extends State<NewsScreen> {
             bottom: false,
             child: _buildMasthead(),
           ),
-          const Divider(height: 1, color: Color(0xFFE0E0E0)),
+          const Divider(height: 0, color: Color(0xFFE0E0E0)),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -139,7 +139,7 @@ class NewsScreenState extends State<NewsScreen> {
   Widget _buildMasthead() {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -217,14 +217,18 @@ class NewsScreenState extends State<NewsScreen> {
         final match = RegExp(r'Text\("(.+)"\)').firstMatch(line);
         if (match != null) {
           widgets.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Text(
-              match.group(1)!,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-                letterSpacing: 0.2,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                match.group(1)!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1A1A2E),
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ));

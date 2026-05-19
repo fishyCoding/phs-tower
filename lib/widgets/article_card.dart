@@ -54,7 +54,7 @@ class HeroArticleCard extends StatelessWidget {
           MaterialPageRoute(
               builder: (_) => ArticleScreen(articleId: article.id))),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -94,10 +94,10 @@ class HeroArticleCard extends StatelessWidget {
             Text(
               article.title,
               style: GoogleFonts.playfairDisplay(
-                fontSize: 21,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFF1A1A2E),
-                height: 1.25,
+                height: 1.2,
               ),
             ),
             if (article.authors.isNotEmpty) ...[
@@ -156,7 +156,7 @@ class HeroArticleCard extends StatelessWidget {
       );
 }
 
-// ── Sidescroll Row (text above image, no overlay) ─────────────────────────────
+// ── Sidescroll Row (no boxes, vertical line separators, top-left text) ────────
 
 class SidescrollRow extends StatelessWidget {
   final List<Article> articles;
@@ -173,55 +173,79 @@ class SidescrollRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 195,
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: articles.length,
         itemBuilder: (context, index) {
           final article = articles[index];
+          final isLatest =
+              article.year == latestYear && article.month == latestMonth;
           return GestureDetector(
             onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) =>
-                        ArticleScreen(articleId: article.id))),
-            child: Container(
-              width: 155,
-              margin: const EdgeInsets.only(right: 12, top: 6, bottom: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(
-                    color: const Color(0xFFE8E8E8), width: 0.8),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Text block
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+                    builder: (_) => ArticleScreen(articleId: article.id))),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Vertical separator before every item except the first
+                if (index != 0)
+                  Container(
+                    width: 1,
+                    height: 100,
+                    color: const Color(0xFFDDDDDD),
+                  ),
+                SizedBox(
+                  width: 148,
+                  height: 100,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Text(
-                          _catLabel(article.category).toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.8,
-                            color: Color(0xFF888888),
-                          ),
+                        // Category + Latest tag
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _catLabel(article.category).toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.9,
+                                color: Color(0xFF888888),
+                              ),
+                            ),
+                            if (isLatest)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A2E),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Text(
+                                  'Latest',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 5),
                         Text(
                           article.title,
                           style: GoogleFonts.playfairDisplay(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF1A1A2E),
-                            height: 1.3,
+                            height: 1.25,
                           ),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
@@ -229,31 +253,8 @@ class SidescrollRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Thin separator
-                  const Divider(height: 1, color: Color(0xFFF0F0F0)),
-                  // Image fills remaining space
-                  Expanded(
-                    child: article.img.isNotEmpty
-                        ? Image.network(
-                            article.img,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: const Color(0xFFF5F5F5),
-                              child: const Center(
-                                  child: Icon(Icons.image_not_supported,
-                                      color: Color(0xFFCCCCCC), size: 24)),
-                            ),
-                          )
-                        : Container(
-                            color: const Color(0xFFF5F5F5),
-                            child: const Center(
-                                child: Icon(Icons.article,
-                                    color: Color(0xFFCCCCCC), size: 28)),
-                          ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
