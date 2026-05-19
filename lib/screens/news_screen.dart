@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/article.dart';
 import '../widgets/article_card.dart';
@@ -43,7 +44,7 @@ class NewsScreenState extends State<NewsScreen> {
     try {
       var query = Supabase.instance.client
           .from('article')
-          .select('id, title, authors, month, year, category, img')
+          .select('id, title, authors, month, year, category, img, content-info')
           .eq('published', true);
 
       if (_selectedCategory != 'All') {
@@ -142,21 +143,13 @@ class NewsScreenState extends State<NewsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'The Tower',
-            style: TextStyle(
+            style: GoogleFonts.playfairDisplay(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A2E),
+              color: const Color(0xFF1A1A2E),
               letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Princeton High School Student Newspaper',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
             ),
           ),
           if (_selectedCategory != 'All') ...[
@@ -396,10 +389,10 @@ class _ArticleListTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               article.title,
-              style: const TextStyle(
+              style: GoogleFonts.playfairDisplay(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1A1A2E),
+                color: const Color(0xFF1A1A2E),
                 height: 1.3,
               ),
             ),

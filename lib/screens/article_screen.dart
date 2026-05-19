@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ArticleScreen extends StatefulWidget {
@@ -36,7 +37,10 @@ class _ArticleScreenState extends State<ArticleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const BackButton(), title: const Text('Article')),
+      appBar: AppBar(
+        leading: const BackButton(),
+        title: Text('Article', style: GoogleFonts.playfairDisplay()),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -57,7 +61,9 @@ class _ArticleScreenState extends State<ArticleScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(_article!['title'] ?? '',
-                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                                style: GoogleFonts.playfairDisplay(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
                             Text((_article!['authors'] as List?)?.join(', ') ?? '',
                                 style: TextStyle(color: Colors.grey[600])),

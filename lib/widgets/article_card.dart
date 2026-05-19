@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/article.dart';
 import '../screens/article_screen.dart';
 
@@ -12,6 +13,20 @@ String _catLabel(String cat) {
     case 'opinions': return 'Opinions';
     default: return cat;
   }
+}
+
+String _capitalizeFirstLine(String s) {
+  final lines = s
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .toList();
+  if (lines.isEmpty) return '';
+  lines[0] = lines[0].replaceAllMapped(
+    RegExp(r'\S+'),
+    (m) => '${m[0]![0].toUpperCase()}${m[0]!.substring(1)}',
+  );
+  return lines.join('\n');
 }
 
 // ── Hero Article Card (featured — text above image, no overlay) ───────────────
@@ -78,10 +93,10 @@ class HeroArticleCard extends StatelessWidget {
             // Title
             Text(
               article.title,
-              style: const TextStyle(
+              style: GoogleFonts.playfairDisplay(
                 fontSize: 21,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A2E),
+                color: const Color(0xFF1A1A2E),
                 height: 1.25,
               ),
             ),
@@ -107,6 +122,22 @@ class HeroArticleCard extends StatelessWidget {
               )
             else
               _placeholder(200),
+            if (article.contentInfo.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  _capitalizeFirstLine(article.contentInfo),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey[600],
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -186,10 +217,10 @@ class SidescrollRow extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           article.title,
-                          style: const TextStyle(
+                          style: GoogleFonts.playfairDisplay(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E),
+                            color: const Color(0xFF1A1A2E),
                             height: 1.3,
                           ),
                           maxLines: 3,

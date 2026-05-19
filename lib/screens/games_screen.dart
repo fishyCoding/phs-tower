@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/crossword.dart';
 import '../widgets/crossword_widget.dart';
@@ -16,10 +17,11 @@ class GamesScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
             child: Text('Games',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 28, fontWeight: FontWeight.bold)),
           ),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -102,7 +104,8 @@ class _GameCard extends StatelessWidget {
               ),
               const Spacer(),
               Text(title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: GoogleFonts.playfairDisplay(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
               Text(description,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
@@ -186,7 +189,7 @@ class _CrosswordListScreenState extends State<CrosswordListScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: const Text('Crossword'),
+        title: Text('Crossword', style: GoogleFonts.playfairDisplay()),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -209,7 +212,8 @@ class _CrosswordListScreenState extends State<CrosswordListScreen> {
                             child: Icon(Icons.grid_on, color: Colors.blue[700]),
                           ),
                           title: Text(cw.title,
-                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                              style: GoogleFonts.playfairDisplay(
+                                  fontWeight: FontWeight.w600)),
                           subtitle: Text('${cw.author} · ${_formatDate(cw.date)}'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => Navigator.push(
@@ -240,7 +244,8 @@ class CrosswordPlayScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(crossword.title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
             Text(crossword.author, style: const TextStyle(fontSize: 12)),
           ],
         ),

@@ -6,6 +6,7 @@ class Article {
   final int year;
   final String category;
   final String img;
+  final String contentInfo;
   final String content;
 
   Article({
@@ -16,6 +17,7 @@ class Article {
     required this.year,
     required this.category,
     required this.img,
+    this.contentInfo = '',
     this.content = '',
   });
 
@@ -28,6 +30,7 @@ class Article {
       year: map['year'] as int? ?? 0,
       category: map['category'] as String? ?? '',
       img: map['img'] as String? ?? '',
+      contentInfo: map['content-info'] as String? ?? '',
       content: map['content'] as String? ?? '',
     );
   }
