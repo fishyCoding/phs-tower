@@ -18,7 +18,7 @@ class NewsScreenState extends State<NewsScreen> {
   bool _loading = true;
   String? _error;
   String _selectedCategory = 'All';
-  String? _layoutScript;
+  List<Map<String, dynamic>> _layouts = [];
   Map<int, Article> _articleCache = {};
 
   @override
@@ -35,16 +35,57 @@ class NewsScreenState extends State<NewsScreen> {
 
   Future<void> _loadLayout() async {
     try {
-      final script = await rootBundle.loadString('lib/home_layout.txt');
-      setState(() => _layoutScript = script);
-    } catch (_) {}
+      // 1. 🔍 DIAGNOSTIC: Scan and print absolutely EVERYTHING in the table
+      final databaseScan =
+          await Supabase.instance.client.from('app_layout').select();
+
+      print("\n================ 🛰️ SUPABASE TABLE SCAN ================");
+      print("Total rows found in 'app_layout' table: ${databaseScan.length}");
+      for (var row in databaseScan) {
+        print("------------------------------------------------");
+        print(
+            "Row ID: ${row['id']} | Month: ${row['month']} | Year: ${row['year']} | Published: ${row['published']}");
+        print("Layout Script Text Content:");
+        print(row['layout']);
+      }
+      print("========================================================\n");
+
+      // 2. Your active layout query
+      final response = await Supabase.instance.client
+          .from('app_layout')
+          .select('layout, month, year')
+          .eq('published', true)
+          .order('year', ascending: false)
+          .order('month', ascending: false)
+          .order('id', ascending: false)
+          .limit(3);
+
+      setState(() {
+        _layouts = (response as List)
+            .map((m) => Map<String, dynamic>.from(m))
+            .toList();
+      });
+
+      // 3. 🔍 DIAGNOSTIC: Check what articles are currently cached
+      print("============ 🧠 APP ARTICLE CACHE CHECK ============");
+      print("Active layouts loaded into memory: ${_layouts.length}");
+      print(
+          "Article IDs currently available in cache: ${_articleCache.keys.toList()}");
+      print("====================================================\n");
+    } catch (e) {
+      debugPrint("❌ Error fetching app layout: $e");
+      setState(() {
+        _error = "Layout Error: $e";
+      });
+    }
   }
 
   Future<void> _fetchArticles() async {
     try {
       var query = Supabase.instance.client
           .from('article')
-          .select('id, title, authors, month, year, category, img, content-info')
+          .select(
+              'id, title, authors, month, year, category, img, content-info')
           .eq('published', true);
 
       if (_selectedCategory != 'All') {
@@ -91,6 +132,70 @@ class NewsScreenState extends State<NewsScreen> {
     }
   }
 
+  // 🚀 Fetch single article on demand from Supabase if missing from initial cache
+  Future<Article?> _fetchSingleArticle(int id) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('article')
+          .select(
+              'id, title, authors, month, year, category, img, content-info')
+          .eq('id', id)
+          .maybeSingle();
+
+      if (response != null) {
+        final article = Article.fromMap(Map<String, dynamic>.from(response));
+        _articleCache[id] = article; // Populate cache memory
+        return article;
+      }
+    } catch (e) {
+      debugPrint("Error fetching single article $id: $e");
+    }
+    return null;
+  }
+
+  // 🚀 Helper to resolve list of missing IDs concurrently for Sidescroll layouts
+  Future<List<Article>> _fetchMultipleArticles(List<int> ids) async {
+    final List<Article> results = [];
+    final List<int> missingIds = [];
+
+    for (final id in ids) {
+      if (_articleCache.containsKey(id)) {
+        results.add(_articleCache[id]!);
+      } else {
+        missingIds.add(id);
+      }
+    }
+
+    if (missingIds.isNotEmpty) {
+      try {
+        final response = await Supabase.instance.client
+            .from('article')
+            .select(
+                'id, title, authors, month, year, category, img, content-info')
+            .inFilter('id', missingIds);
+
+        if (response != null) {
+          final fetched = (response as List)
+              .map((m) => Article.fromMap(Map<String, dynamic>.from(m)))
+              .toList();
+          for (final article in fetched) {
+            _articleCache[article.id] = article; // Sync to cache memory
+            results.add(article);
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching batch articles $missingIds: $e");
+      }
+    }
+
+    // Sort to keep original sequence requested in the layout text script string
+    final Map<int, Article> sortedMap = {for (var a in results) a.id: a};
+    return ids
+        .where((id) => sortedMap.containsKey(id))
+        .map((id) => sortedMap[id]!)
+        .toList();
+  }
+
   void selectCategory(String category) {
     setState(() {
       _selectedCategory = category;
@@ -102,8 +207,19 @@ class NewsScreenState extends State<NewsScreen> {
 
   String _monthName(int month) {
     const months = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return month >= 1 && month <= 12 ? months[month] : '';
   }
@@ -127,7 +243,7 @@ class NewsScreenState extends State<NewsScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
                     ? Center(child: Text('Error: $_error'))
-                    : _selectedCategory == 'All' && _layoutScript != null
+                    : _selectedCategory == 'All' && _layouts.isNotEmpty
                         ? _buildLayoutView()
                         : _buildListView(),
           ),
@@ -170,77 +286,181 @@ class NewsScreenState extends State<NewsScreen> {
   }
 
   // ── Layout view ────────────────────────────────────────────────────────────
-
   Widget _buildLayoutView() {
-    if (_articles.isEmpty) return const SizedBox.shrink();
-    final lines = _layoutScript!.split('\n');
+    if (_articles.isEmpty || _layouts.isEmpty) return const SizedBox.shrink();
     final widgets = <Widget>[];
 
-    for (final rawLine in lines) {
-      final line = rawLine.trim();
-      if (line.isEmpty || line.startsWith('#')) continue;
+    for (int i = 0; i < _layouts.length; i++) {
+      final layoutData = _layouts[i];
+      final script = layoutData['layout'] as String;
+      final month = layoutData['month'] as int;
+      final year = layoutData['year'] as int;
+      final isLatest = i == 0;
 
-      if (line.startsWith('LargeArticle(')) {
-        final id = int.tryParse(line.replaceAll(RegExp(r'[^0-9]'), ''));
-        if (id != null && _articleCache.containsKey(id)) {
-          widgets.add(HeroArticleCard(
-            article: _articleCache[id]!,
-            latestYear: _latestYear,
-            latestMonth: _latestMonth,
-          ));
-        }
-      } else if (line.startsWith('Sidescroll(')) {
-        final inner = line.substring(
-            'Sidescroll('.length, line.lastIndexOf(')'));
-        final ids = inner
-            .split(',')
-            .map((s) => int.tryParse(s.trim()))
-            .whereType<int>()
-            .toList();
-        final articles = ids
-            .where((id) => _articleCache.containsKey(id))
-            .map((id) => _articleCache[id]!)
-            .toList();
-        if (articles.isNotEmpty) {
-          widgets.add(SidescrollRow(
-            articles: articles,
-            latestYear: _latestYear,
-            latestMonth: _latestMonth,
-          ));
-        }
-      } else if (line == 'Divider') {
-        widgets.add(const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Divider(height: 1, color: Color(0xFFE0E0E0)),
-        ));
-      } else if (line.startsWith('Text(')) {
-        final match = RegExp(r'Text\("(.+)"\)').firstMatch(line);
-        if (match != null) {
-          widgets.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                match.group(1)!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: 0.2,
+      // ── Insert Divider / Header ──
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, isLatest ? 8 : 24, 16, 12),
+          child: Row(
+            children: [
+              if (!isLatest)
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+              if (!isLatest) const SizedBox(width: 12),
+              Text(
+                '${_monthName(month)} $year',
+                style: TextStyle(
+                  fontSize: isLatest ? 18 : 12,
+                  fontWeight: FontWeight.bold,
+                  color: isLatest ? const Color(0xFF1A1A2E) : Colors.grey[600],
                 ),
               ),
-            ),
+              if (isLatest) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Latest',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+              if (!isLatest) const SizedBox(width: 12),
+              if (!isLatest)
+                const Expanded(child: Divider(color: Color(0xFFE0E0E0))),
+            ],
+          ),
+        ),
+      );
+
+      // ── Parse the script for this specific layout ──
+      final lines = script.split('\n');
+      for (final rawLine in lines) {
+        final line = rawLine.trim();
+        if (line.isEmpty || line.startsWith('#')) continue;
+
+        if (line.startsWith('LargeArticle(')) {
+          final id = int.tryParse(line.replaceAll(RegExp(r'[^0-9]'), ''));
+          if (id != null) {
+            if (_articleCache.containsKey(id)) {
+              widgets.add(HeroArticleCard(
+                article: _articleCache[id]!,
+                latestYear: _latestYear,
+                latestMonth: _latestMonth,
+              ));
+            } else {
+              // Asynchronously fetch on demand if missing from local memory map
+              widgets.add(
+                FutureBuilder<Article?>(
+                  future: _fetchSingleArticle(id),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return HeroArticleCard(
+                        article: snapshot.data!,
+                        latestYear: _latestYear,
+                        latestMonth: _latestMonth,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              );
+            }
+          }
+        } else if (line.startsWith('Sidescroll(')) {
+          final inner =
+              line.substring('Sidescroll('.length, line.lastIndexOf(')'));
+          final ids = inner
+              .split(',')
+              .map((s) => int.tryParse(s.trim()))
+              .whereType<int>()
+              .toList();
+
+          // Check if every single item is completely cached upfront
+          final bool allCached =
+              ids.every((id) => _articleCache.containsKey(id));
+
+          if (allCached) {
+            final articles = ids.map((id) => _articleCache[id]!).toList();
+            if (articles.isNotEmpty) {
+              widgets.add(SidescrollRow(
+                articles: articles,
+                latestYear: _latestYear,
+                latestMonth: _latestMonth,
+              ));
+            }
+          } else {
+            // Asynchronously resolve missing array items concurrently
+            widgets.add(
+              FutureBuilder<List<Article>>(
+                future: _fetchMultipleArticles(ids),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                    return SidescrollRow(
+                      articles: snapshot.data!,
+                      latestYear: _latestYear,
+                      latestMonth: _latestMonth,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            );
+          }
+        } else if (line == 'Divider') {
+          widgets.add(const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Divider(height: 1, color: Color(0xFFE0E0E0)),
           ));
+        } else if (line.startsWith('Text(')) {
+          final match = RegExp(r'Text\("(.+)"\)').firstMatch(line);
+          if (match != null) {
+            widgets.add(Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  match.group(1)!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ));
+          }
         }
       }
     }
 
+    widgets.add(const SizedBox(height: 32));
     return ListView(children: widgets);
   }
 
   // ── List view ──────────────────────────────────────────────────────────────
-
   Widget _buildListView() {
     if (_articles.isEmpty) {
       return const Center(child: Text('No articles found.'));
@@ -248,7 +468,6 @@ class NewsScreenState extends State<NewsScreen> {
 
     final List<dynamic> listItems = [];
     bool dividerInserted = false;
-
     for (final article in _articles) {
       final isLatest =
           article.year == _latestYear && article.month == _latestMonth;
@@ -296,8 +515,7 @@ class NewsScreenState extends State<NewsScreen> {
           if (prev == 'divider') {
             showHeader = true;
           } else if (prev is Article &&
-              (prev.year != article.year ||
-                  prev.month != article.month)) {
+              (prev.year != article.year || prev.month != article.month)) {
             showHeader = true;
           }
         }
@@ -314,9 +532,8 @@ class NewsScreenState extends State<NewsScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isLatest
-                          ? const Color(0xFF1A1A2E)
-                          : Colors.grey[500],
+                      color:
+                          isLatest ? const Color(0xFF1A1A2E) : Colors.grey[500],
                     ),
                   ),
                   if (isLatest) ...[
@@ -345,8 +562,7 @@ class NewsScreenState extends State<NewsScreen> {
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) =>
-                          ArticleScreen(articleId: article.id))),
+                      builder: (_) => ArticleScreen(articleId: article.id))),
             ),
             const Divider(height: 1, color: Color(0xFFF0F0F0)),
           ],
@@ -357,7 +573,6 @@ class NewsScreenState extends State<NewsScreen> {
 }
 
 // ── Article list tile (no image, clean text layout) ───────────────────────────
-
 class _ArticleListTile extends StatelessWidget {
   final Article article;
   final VoidCallback onTap;
@@ -366,9 +581,12 @@ class _ArticleListTile extends StatelessWidget {
 
   String _catLabel(String cat) {
     switch (cat.toLowerCase()) {
-      case 'news-features': return 'News';
-      case 'arts-entertainment': return 'Arts';
-      default: return cat;
+      case 'news-features':
+        return 'News';
+      case 'arts-entertainment':
+        return 'Arts';
+      default:
+        return cat;
     }
   }
 
