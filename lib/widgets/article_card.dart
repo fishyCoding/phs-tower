@@ -15,6 +15,13 @@ String _catLabel(String cat) {
   }
 }
 
+String _minuteRead(String text) {
+  if (text.trim().isEmpty) return '';
+  final wordCount = text.trim().split(RegExp(r'\s+')).length;
+  final minutes = (wordCount / 200).ceil();
+  return '$minutes min read';
+}
+
 String _capitalizeFirstLine(String s) {
   final lines = s
       .split('\n')
@@ -107,6 +114,13 @@ class HeroArticleCard extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
             ],
+            const SizedBox(height: 4),
+            Text(
+              _minuteRead(article.content.isNotEmpty
+                  ? article.content
+                  : article.contentInfo),
+              style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+            ),
             const SizedBox(height: 12),
             // Image below text
             if (article.img.isNotEmpty)

@@ -24,7 +24,11 @@ class PHSTowerApp extends StatelessWidget {
     return MaterialApp(
       title: 'PHS Tower',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A1A2E)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A1A2E),
+          surface: Colors.white,
+        ),
+        scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
       home: const MainScreen(),
