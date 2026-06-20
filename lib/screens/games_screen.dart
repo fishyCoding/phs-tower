@@ -17,37 +17,47 @@ class GamesScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-            child: Text('Games',
-                style: GoogleFonts.playfairDisplay(
-                    fontSize: 28, fontWeight: FontWeight.bold)),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Games',
+                    style: GoogleFonts.playfairDisplay(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1A1A2E))),
+                const SizedBox(height: 4),
+                const Text('Play games from The Tower',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF888888),
+                        letterSpacing: 0.1)),
+              ],
+            ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Text('Play games from the PHS Tower',
-                style: TextStyle(fontSize: 14, color: Colors.black54)),
-          ),
+          // Cards
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               children: [
                 _GameCard(
                   title: 'Crossword',
-                  description: 'Classic crossword puzzles from the Tower',
-                  icon: Icons.grid_on,
-                  color: Colors.blue[700]!,
+                  subtitle: 'Weekly puzzles',
+                  description: 'Test your vocabulary with crosswords written by Tower staff.',
+                  icon: Icons.grid_on_rounded,
+                  accentColor: const Color(0xFF1A1A2E),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const CrosswordListScreen())),
                 ),
+                const SizedBox(height: 14),
                 _GameCard(
                   title: 'Minesweeper',
-                  description: 'Clear the board without hitting a mine',
-                  icon: Icons.blur_on,
-                  color: Colors.green[700]!,
+                  subtitle: 'Classic puzzle',
+                  description: 'Clear the minefield without triggering a single bomb.',
+                  icon: Icons.blur_on_rounded,
+                  accentColor: const Color(0xFF2D6A4F),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const MinesweeperScreen())),
                 ),
@@ -64,54 +74,85 @@ class GamesScreen extends StatelessWidget {
 
 class _GameCard extends StatelessWidget {
   final String title;
+  final String subtitle;
   final String description;
   final IconData icon;
-  final Color color;
+  final Color accentColor;
   final VoidCallback? onTap;
 
   const _GameCard({
     required this.title,
+    required this.subtitle,
     required this.description,
     required this.icon,
-    required this.color,
-    required this.onTap,
+    required this.accentColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDisabled = onTap == null;
     return GestureDetector(
       onTap: onTap,
-      child: Opacity(
-        opacity: isDisabled ? 0.5 : 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withOpacity(0.3)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: Colors.white, size: 26),
+      child: Container(
+        decoration: BoxDecoration(
+          color: accentColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(22),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Icon block
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(14),
               ),
-              const Spacer(),
-              Text(title,
-                  style: GoogleFonts.playfairDisplay(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(description,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-          ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 18),
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subtitle.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    title,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withOpacity(0.7),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded,
+                color: Colors.white.withOpacity(0.5), size: 16),
+          ],
         ),
       ),
     );
