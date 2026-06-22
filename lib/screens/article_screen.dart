@@ -210,7 +210,7 @@ class _RelatedArticleTile extends StatelessWidget {
     final img = article['img'] as String? ?? '';
 
     return InkWell(
-      onTap: () => Navigator.pushReplacement(
+      onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ArticleScreen(articleId: article['id'] as int),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,7 +8,16 @@ import '../widgets/article_card.dart';
 import '../screens/article_screen.dart';
 
 class NewsScreen extends StatefulWidget {
-  const NewsScreen({super.key});
+  final GoogleSignInAccount? user;
+  final VoidCallback? onSignIn;
+  final VoidCallback? onSignOut;
+
+  const NewsScreen({
+    super.key,
+    this.user,
+    this.onSignIn,
+    this.onSignOut,
+  });
 
   @override
   State<NewsScreen> createState() => NewsScreenState();
@@ -137,34 +147,98 @@ class NewsScreenState extends State<NewsScreen> {
   }
 
   Widget _buildMasthead() {
+    final user = widget.user;
     return Container(
       color: Colors.white,
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Text(
-            'The Tower',
-            style: GoogleFonts.playfairDisplay(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1A1A2E),
-              letterSpacing: -0.5,
+          // Centered title + subtitle
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'The Tower',
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A1A2E),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              if (_selectedCategory != 'All') ...[
+                const SizedBox(height: 4),
+                Text(
+                  _selectedCategory.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.4,
+                    color: Color(0xFF999999),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          // Sign-in button top-right
+          Positioned(
+            right: 0,
+            top: 0,
+            child: GestureDetector(
+              onTap: user != null ? widget.onSignOut : widget.onSignIn,
+              child: user != null
+                  ? CircleAvatar(
+                      radius: 16,
+                      backgroundImage: user.photoUrl != null
+                          ? NetworkImage(user.photoUrl!)
+                          : null,
+                      backgroundColor: const Color(0xFF1A1A2E),
+                      child: user.photoUrl == null
+                          ? Text(
+                              (user.displayName ?? user.email)[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
+                          : null,
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFDDDDDD)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.network(
+                            'https://www.google.com/favicon.ico',
+                            width: 14,
+                            height: 14,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.login,
+                              size: 14,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF1A1A2E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ),
-          if (_selectedCategory != 'All') ...[
-            const SizedBox(height: 4),
-            Text(
-              _selectedCategory.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.4,
-                color: Color(0xFF999999),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -237,8 +311,7 @@ class NewsScreenState extends State<NewsScreen> {
       }
     }
 
-    return ListView(padding: EdgeInsets.zero, children: widgets);
-  }
+return ListView(padding: const EdgeInsets.only(top: 8), children: widgets);  }
 
   // ── List view ──────────────────────────────────────────────────────────────
 

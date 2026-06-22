@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'screens/news_screen.dart';
 import 'screens/games_screen.dart';
 import 'screens/outreach_screen.dart';
@@ -24,11 +25,7 @@ class PHSTowerApp extends StatelessWidget {
     return MaterialApp(
       title: 'PHS Tower',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1A1A2E),
-          surface: Colors.white,
-        ),
-        scaffoldBackgroundColor: Colors.white,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A1A2E)),
         useMaterial3: true,
       ),
       home: const MainScreen(),
@@ -67,7 +64,7 @@ const _newsSubEntries = [
   _NavEntry('all',           'All',      Icons.home_outlined,              _NavKind.newsSub),
   _NavEntry('news-features', 'News-F',   Icons.article_outlined,           _NavKind.newsSub),
   _NavEntry('opinions',      'Opinions', Icons.lightbulb_outline,          _NavKind.newsSub),
-  _NavEntry('arts',          'Arts',     Icons.palette_outlined,           _NavKind.newsSub),
+  _NavEntry('arts-entertainment', 'Arts', Icons.palette_outlined,         _NavKind.newsSub),
   _NavEntry('sports',        'Sports',   Icons.sports_basketball_outlined, _NavKind.newsSub),
   _NavEntry('search',        'Search',   Icons.search,                     _NavKind.newsSub),
 ];
@@ -96,6 +93,10 @@ class _MainScreenState extends State<MainScreen>
   final _newsKey   = GlobalKey<NewsScreenState>();
   final _searchKey = GlobalKey<SearchScreenState>();
 
+  // Auth
+  final _googleSignIn = GoogleSignIn(scopes: ['email']);
+  GoogleSignInAccount? _user;
+
   @override
   void initState() {
     super.initState();
@@ -109,12 +110,50 @@ class _MainScreenState extends State<MainScreen>
       curve: Curves.easeInOut,
       reverseCurve: Curves.easeInOut,
     );
+    // Restore previous session silently
+    _googleSignIn.signInSilently().then((u) {
+      if (u != null && mounted) setState(() => _user = u);
+    });
   }
 
   @override
   void dispose() {
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleSignIn() async {
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account != null && mounted) setState(() => _user = account);
+    } catch (e) {
+      debugPrint('Google sign-in error: $e');
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    await _googleSignIn.signOut();
+    if (mounted) setState(() => _user = null);
+  }
+
+  void _showAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(_user!.displayName ?? 'Account'),
+        content: Text(_user!.email),
+        actions: [
+          TextButton(
+            onPressed: () { Navigator.pop(context); _handleSignOut(); },
+            child: const Text('Sign out'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── tap handlers ────────────────────────────────────────────────────────────
@@ -130,10 +169,13 @@ class _MainScreenState extends State<MainScreen>
         _animController.forward();
       }
     } else {
+      // Returning from another top-level page — reset sub to All
       setState(() {
         _topPage      = 'news';
         _newsExpanded = true;
+        _newsSubPage  = 'all';
       });
+      _newsKey.currentState?.selectCategory('All');
       _animController.forward();
     }
   }
@@ -171,7 +213,12 @@ class _MainScreenState extends State<MainScreen>
       return IndexedStack(
         index: _newsSubPage == 'search' ? 1 : 0,
         children: [
-          NewsScreen(key: _newsKey),
+          NewsScreen(
+            key: _newsKey,
+            user: _user,
+            onSignIn: _handleSignIn,
+            onSignOut: _handleSignOut,
+          ),
           SearchScreen(key: _searchKey),
         ],
       );
