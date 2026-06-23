@@ -12,8 +12,8 @@ void main() async {
     url: 'https://yusjougmsdnhcsksadaw.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1c2pvdWdtc2RuaGNza3NhZGF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDU1NzI4NzQsImV4cCI6MTk2MTE0ODg3NH0.DHLgiswzK6Y_z5_mXAkRn1xy60zvhdb_iQH5gAyJorg',
   );
-  PaintingBinding.instance.imageCache.maximumSize = 1000;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
+  PaintingBinding.instance.imageCache.maximumSize = 200;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024;
   runApp(const PHSTowerApp());
 }
 
@@ -93,9 +93,33 @@ class _MainScreenState extends State<MainScreen>
   final _newsKey   = GlobalKey<NewsScreenState>();
   final _searchKey = GlobalKey<SearchScreenState>();
 
-  // Auth
-  final _googleSignIn = GoogleSignIn(scopes: ['email']);
+  // Auth — restricted to the school's Google Workspace domain.
+  static const _allowedDomain = 'princetonk12.org';
+
+  // ⚠️ FILL ME IN: the **Web** OAuth client ID from Google Cloud Console
+  // (APIs & Services → Credentials → OAuth client of type "Web application").
+  // This is used as the audience of the idToken so Supabase can verify it, and
+  // the same id must be added under Supabase → Auth → Providers → Google.
+  static const _webClientId =
+      '452482738574-7dg9bofecv2qvhuo4t6kqcptqf4ugu5g.apps.googleusercontent.com';
+
+  final _googleSignIn = GoogleSignIn(
+    scopes: const ['email'],
+    // Hints the Google account picker to only offer @princetonk12.org accounts.
+    hostedDomain: _allowedDomain,
+    // Makes the returned idToken audience = the Web client → lets Supabase
+    // verify it via signInWithIdToken.
+    serverClientId: _webClientId,
+  );
   GoogleSignInAccount? _user;
+
+  /// Exact-match domain check (defence in depth — `hostedDomain` only filters
+  /// the picker; we never trust an account whose email isn't on the domain).
+  bool _isAllowedDomain(String email) {
+    final at = email.lastIndexOf('@');
+    if (at < 0) return false;
+    return email.substring(at + 1).toLowerCase() == _allowedDomain;
+  }
 
   @override
   void initState() {
@@ -110,9 +134,17 @@ class _MainScreenState extends State<MainScreen>
       curve: Curves.easeInOut,
       reverseCurve: Curves.easeInOut,
     );
-    // Restore previous session silently
-    _googleSignIn.signInSilently().then((u) {
-      if (u != null && mounted) setState(() => _user = u);
+    // Restore previous session silently — re-establishing the Supabase session
+    // and re-checking the domain.
+    _googleSignIn.signInSilently().then((u) async {
+      if (u == null) return;
+      final ok = await _authorize(u);
+      if (!ok) {
+        await _googleSignIn.signOut();
+        await Supabase.instance.client.auth.signOut();
+        return;
+      }
+      if (mounted) setState(() => _user = u);
     });
   }
 
@@ -122,10 +154,49 @@ class _MainScreenState extends State<MainScreen>
     super.dispose();
   }
 
+  /// Validates the domain and establishes a Supabase session from the Google
+  /// idToken. Returns true on success. On any failure the account is signed out
+  /// so we never hold a half-authenticated state.
+  Future<bool> _authorize(GoogleSignInAccount account) async {
+    if (!_isAllowedDomain(account.email)) return false;
+
+    final auth = await account.authentication;
+    final idToken = auth.idToken;
+    if (idToken == null) {
+      debugPrint('Google sign-in: missing idToken (check serverClientId).');
+      return false;
+    }
+
+    await Supabase.instance.client.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: auth.accessToken,
+    );
+    return true;
+  }
+
   Future<void> _handleSignIn() async {
     try {
       final account = await _googleSignIn.signIn();
-      if (account != null && mounted) setState(() => _user = account);
+      if (account == null) return; // user cancelled
+
+      final ok = await _authorize(account);
+      if (!ok) {
+        // Off-domain (or token problem) — reject and clear everything.
+        await _googleSignIn.signOut();
+        await Supabase.instance.client.auth.signOut();
+        if (mounted) {
+          setState(() => _user = null);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please sign in with your @$_allowedDomain account.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (mounted) setState(() => _user = account);
     } catch (e) {
       debugPrint('Google sign-in error: $e');
     }
@@ -133,6 +204,7 @@ class _MainScreenState extends State<MainScreen>
 
   Future<void> _handleSignOut() async {
     await _googleSignIn.signOut();
+    await Supabase.instance.client.auth.signOut();
     if (mounted) setState(() => _user = null);
   }
 
@@ -224,7 +296,9 @@ class _MainScreenState extends State<MainScreen>
       );
     }
     if (_topPage == 'games')    return const GamesScreen();
-    if (_topPage == 'outreach') return const OutreachScreen();
+    if (_topPage == 'outreach') {
+      return OutreachScreen(user: _user, onSignIn: _handleSignIn);
+    }
     return const SizedBox.shrink();
   }
 

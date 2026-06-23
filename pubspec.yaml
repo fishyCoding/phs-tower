@@ -15,6 +15,9 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   google_fonts: ^6.2.1
   google_sign_in: ^6.2.1
+  flutter_markdown_plus: ^1.0.7
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.14.0
 
 dev_dependencies:
   flutter_test:

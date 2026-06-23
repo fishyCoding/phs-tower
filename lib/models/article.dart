@@ -21,6 +21,20 @@ class Article {
     this.content = '',
   });
 
+  Article copyWith({String? content}) {
+    return Article(
+      id: id,
+      title: title,
+      authors: authors,
+      month: month,
+      year: year,
+      category: category,
+      img: img,
+      contentInfo: contentInfo,
+      content: content ?? this.content,
+    );
+  }
+
   factory Article.fromMap(Map<String, dynamic> map) {
     return Article(
       id: map['id'] as int,

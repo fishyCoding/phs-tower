@@ -40,7 +40,50 @@ class NewsScreenState extends State<NewsScreen> {
   String get selectedCategory => _selectedCategory;
 
   Future<void> _loadData() async {
-    await Future.wait([_fetchArticles(), _loadLayout()]);
+    // Load the layout first so _fetchArticles knows which articles are rendered
+    // as hero cards (the only place a read time is shown) and can pull their
+    // full content for an accurate word count.
+    await _loadLayout();
+    await _fetchArticles();
+  }
+
+  /// Article ids referenced by `LargeArticle(id)` lines in the home layout —
+  /// these render as HeroArticleCards, the only cards that display a read time.
+  Set<int> _heroIds() {
+    final script = _layoutScript;
+    if (script == null) return {};
+    final ids = <int>{};
+    for (final raw in script.split('\n')) {
+      final line = raw.trim();
+      if (line.startsWith('LargeArticle(')) {
+        final id = int.tryParse(line.replaceAll(RegExp(r'[^0-9]'), ''));
+        if (id != null) ids.add(id);
+      }
+    }
+    return ids;
+  }
+
+  /// Fetches full `content` for just the hero articles and merges it into the
+  /// cache so HeroArticleCard can compute a real read time. Kept targeted (a
+  /// handful of ids) instead of selecting `content` for all ~1k articles.
+  Future<void> _attachHeroContent() async {
+    final ids = _heroIds().where(_articleCache.containsKey).toList();
+    if (ids.isEmpty) return;
+    try {
+      final rows = await Supabase.instance.client
+          .from('article')
+          .select('id, content')
+          .inFilter('id', ids);
+      for (final row in (rows as List)) {
+        final id = row['id'] as int;
+        final content = row['content'] as String? ?? '';
+        final existing = _articleCache[id];
+        if (existing != null) {
+          _articleCache[id] = existing.copyWith(content: content);
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   Future<void> _loadLayout() async {
@@ -93,6 +136,11 @@ class NewsScreenState extends State<NewsScreen> {
         _articleCache = cache;
         _loading = false;
       });
+
+      // Pull full content for the hero cards so their read time is accurate.
+      if (_selectedCategory == 'All') {
+        await _attachHeroContent();
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -517,6 +565,10 @@ class _ArticleListTileState extends State<_ArticleListTile> {
                   rawImg,
                   width: imgSize,
                   height: imgSize,
+                  // Decode at roughly display resolution instead of full-res so
+                  // each thumbnail holds a small bitmap, not several MB.
+                  cacheWidth: 270,
+                  cacheHeight: 270,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {

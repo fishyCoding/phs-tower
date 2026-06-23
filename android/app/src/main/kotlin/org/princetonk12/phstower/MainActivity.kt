@@ -1,4 +1,4 @@
-package com.example.phs_tower
+package org.princetonk12.phstower
 
 import io.flutter.embedding.android.FlutterActivity
 

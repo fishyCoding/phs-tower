@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ArticleScreen extends StatefulWidget {
   final int articleId;
@@ -67,33 +69,62 @@ class _ArticleScreenState extends State<ArticleScreen> {
     }
   }
 
-  /// Splits content on blank lines into paragraphs, collapses soft line-breaks
-  /// (single \n used as word-wrap hints in the DB) into spaces.
-  List<Widget> _buildParagraphs(String raw) {
-    // Normalise line endings
-    final normalised = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
-    // Split on one or more blank lines → real paragraph breaks
-    final paragraphs = normalised
-        .split(RegExp(r'\n{2,}'))
-        .map((p) => p.replaceAll('\n', ' ').trim())
-        .where((p) => p.isNotEmpty)
-        .toList();
+  static const _ink = Color(0xFF1A1A2E);
+  static const _link = Color(0xFF1A4E8A);
 
-    final widgets = <Widget>[];
-    for (int i = 0; i < paragraphs.length; i++) {
-      widgets.add(Text(
-        paragraphs[i],
-        style: const TextStyle(
-          fontSize: 16,
-          height: 1.65,
-          color: Color(0xFF1A1A2E),
+  /// Renders the article body as Markdown. The DB stores single `\n` as soft
+  /// word-wrap hints and blank lines as paragraph breaks — both of which map
+  /// cleanly onto standard Markdown (soft breaks collapse to spaces, blank
+  /// lines start new paragraphs), so the raw content is passed through as-is.
+  Widget _buildBody(String raw) {
+    final normalised = raw.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+
+    return MarkdownBody(
+      data: normalised,
+      selectable: true,
+      onTapLink: (text, href, title) async {
+        if (href == null) return;
+        final uri = Uri.tryParse(href);
+        if (uri != null && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      styleSheet: MarkdownStyleSheet(
+        p: const TextStyle(fontSize: 16, height: 1.65, color: _ink),
+        pPadding: const EdgeInsets.only(bottom: 16),
+        h1: GoogleFonts.playfairDisplay(
+            fontSize: 24, fontWeight: FontWeight.bold, color: _ink, height: 1.3),
+        h2: GoogleFonts.playfairDisplay(
+            fontSize: 21, fontWeight: FontWeight.bold, color: _ink, height: 1.3),
+        h3: GoogleFonts.playfairDisplay(
+            fontSize: 18, fontWeight: FontWeight.w600, color: _ink, height: 1.3),
+        h1Padding: const EdgeInsets.only(top: 8, bottom: 6),
+        h2Padding: const EdgeInsets.only(top: 8, bottom: 6),
+        h3Padding: const EdgeInsets.only(top: 8, bottom: 4),
+        strong: const TextStyle(fontWeight: FontWeight.w700, color: _ink),
+        em: const TextStyle(fontStyle: FontStyle.italic, color: _ink),
+        a: const TextStyle(
+            color: _link, decoration: TextDecoration.underline),
+        listBullet: const TextStyle(fontSize: 16, height: 1.65, color: _ink),
+        blockquote: TextStyle(
+            fontSize: 16, height: 1.6, color: Colors.grey[700], fontStyle: FontStyle.italic),
+        blockquoteDecoration: const BoxDecoration(
+          color: Color(0xFFF6F6F6),
+          border: Border(left: BorderSide(color: Color(0xFFCCCCCC), width: 3)),
         ),
-      ));
-      if (i < paragraphs.length - 1) {
-        widgets.add(const SizedBox(height: 16));
-      }
-    }
-    return widgets;
+        blockquotePadding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        code: GoogleFonts.robotoMono(
+            fontSize: 14, backgroundColor: const Color(0xFFF0F0F0), color: _ink),
+        codeblockDecoration: BoxDecoration(
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        codeblockPadding: const EdgeInsets.all(12),
+        horizontalRuleDecoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
+        ),
+      ),
+    );
   }
 
   @override
@@ -161,7 +192,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                             const SizedBox(height: 18),
                             const Divider(color: Color(0xFFE0E0E0)),
                             const SizedBox(height: 18),
-                            ..._buildParagraphs(_article!['content'] ?? ''),
+                            _buildBody(_article!['content'] ?? ''),
                           ],
                         ),
                       ),
