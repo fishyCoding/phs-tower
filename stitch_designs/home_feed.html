@@ -1,0 +1,286 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>The Campus Chronicle | Article Feed</title>
+<!-- Tailwind & Fonts -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f9f9ff; /* background token */
+            color: #121c2c; /* on-background token */
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Custom scrollbar for horizontal sections */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed": "#181c1e",
+                    "tertiary-fixed": "#ffe17c",
+                    "tertiary-fixed-dim": "#e6c446",
+                    "surface-tint": "#455f88",
+                    "error": "#ba1a1a",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed-variant": "#2d476f",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed": "#d6e3ff",
+                    "on-surface": "#121c2c",
+                    "on-primary-container": "#86a0cd",
+                    "on-error-container": "#93000a",
+                    "surface-container-low": "#f0f3ff",
+                    "surface-variant": "#d9e3f9",
+                    "surface": "#f9f9ff",
+                    "on-background": "#121c2c",
+                    "on-secondary-fixed-variant": "#434749",
+                    "surface-bright": "#f9f9ff",
+                    "primary": "#002045",
+                    "on-secondary-container": "#5f6365",
+                    "on-primary-fixed": "#001b3c",
+                    "surface-container": "#e7eeff",
+                    "surface-container-highest": "#d9e3f9",
+                    "on-tertiary-fixed": "#231b00",
+                    "on-error": "#ffffff",
+                    "outline": "#74777f",
+                    "inverse-surface": "#273141",
+                    "secondary-fixed-dim": "#c3c7c9",
+                    "inverse-primary": "#adc7f7",
+                    "inverse-on-surface": "#ebf1ff",
+                    "tertiary-container": "#c9a82c",
+                    "surface-container-high": "#dee8ff",
+                    "primary-container": "#1a365d",
+                    "on-tertiary-fixed-variant": "#564500",
+                    "surface-container-lowest": "#ffffff",
+                    "background": "#f9f9ff",
+                    "tertiary": "#715c00",
+                    "secondary": "#5b5f61",
+                    "primary-fixed-dim": "#adc7f7",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#43474e",
+                    "on-tertiary": "#ffffff",
+                    "on-tertiary-container": "#4d3e00",
+                    "surface-dim": "#d0daf0",
+                    "secondary-fixed": "#e0e3e5",
+                    "secondary-container": "#dde0e2",
+                    "outline-variant": "#c4c6cf"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "unit": "8px",
+                    "stack-md": "16px",
+                    "stack-lg": "24px",
+                    "gutter": "16px",
+                    "container-margin": "20px",
+                    "section-gap": "40px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display-lg": ["Playfair Display"],
+                    "headline-md": ["Playfair Display"],
+                    "headline-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-on-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface border-b border-outline-variant/10">
+<div class="flex items-center gap-4">
+<!-- Space for logo/leading if needed, but per prompt we focus on centered title and trailing search -->
+<div class="w-10"></div>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">The Campus Chronicle</h1>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary">search</span>
+</button>
+</header>
+<main class="pt-20 pb-32">
+<!-- Hero Section (The Tower Branding Style) -->
+<article class="px-container-margin mb-section-gap">
+<div class="flex flex-col gap-stack-sm mb-stack-md">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary/70">Top Story</span>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary leading-tight">PPS debuts “Visigo Agent” software to increase student monitoring</h2>
+<div class="flex items-center gap-3 mt-1">
+<span class="font-label-md text-label-md text-on-surface-variant">Harry Dweck</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="font-label-md text-label-md text-on-surface-variant/80">4 min read</span>
+</div>
+</div>
+<!-- Dashboard Preview Card -->
+<div class="relative group bg-surface-container-lowest rounded-lg overflow-hidden border border-outline-variant/20 shadow-[0px_4px_12px_rgba(0,32,69,0.05)] transition-all hover:shadow-[0px_8px_20px_rgba(0,32,69,0.1)]">
+<div class="aspect-[16/9] w-full bg-surface-container-highest overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean and professional digital user interface dashboard showing a monitoring system for educational software. The screen displays a list of user events with colorful status indicators, severity levels, and specific alert messages. The overall aesthetic is minimalist, modern, and high-contrast, fitting a scholarly journalistic publication's digital edition. Soft, diffused indoor lighting provides a crisp focus on the data visualization." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBde6DWrzK-YUMJL95vhg031uEyISCbAmv_-23aSlYtiZrYYiwFVXKdWRHul6pUcg8yv99QL26aKjQfZ8YB-_smsFt7KxzNQAMGQhsx7oY6cY4UPl4BLjy0oAo3GAHu2Y-dYJXQ4wwzJd049Nt2LK2AW7vF-GUqWtA2_O9Y3f1ZPEKSIOGMCf9FPwAS4rZZ1udSwcIfRNDoIdcEzC7PR4V_uk-5oUsAmkBHKlhcO7a7RKM2N8nLq3a2VIbcvOHz-WZo1thPTHtJkes">
+</div>
+<div class="p-stack-md bg-surface-container-lowest">
+<p class="font-label-sm text-label-sm text-on-surface-variant italic leading-relaxed">
+                        An example of the dashboard district technology personnel will have access to with Linewize. Events ranging from three to five in severity will be sent for review.
+                    </p>
+</div>
+</div>
+</article>
+<!-- Divider -->
+<div class="px-container-margin mb-stack-lg">
+<div class="h-[1px] w-full bg-primary/10"></div>
+</div><section class="mb-section-gap">
+<div class="px-container-margin mb-stack-md">
+<h3 class="font-headline-md text-headline-md text-primary uppercase tracking-wider text-sm">Quick Reads</h3>
+</div>
+<div class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-4 px-container-margin">
+<!-- Card 1 -->
+<div class="flex-none w-[70%] snap-start group cursor-pointer bg-surface-container-low p-stack-md rounded-lg border border-outline-variant/20">
+
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary/70">Arts</span>
+<h4 class="font-headline-md text-lg text-primary leading-snug mt-1 group-hover:underline underline-offset-4">The evolution of campus murals</h4>
+<span class="font-label-sm text-label-sm text-on-surface-variant/80 mt-1 block">2 min read</span>
+</div>
+<!-- Card 2 -->
+<div class="flex-none w-[70%] snap-start group cursor-pointer bg-surface-container-low p-stack-md rounded-lg border border-outline-variant/20">
+
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary/70">Science</span>
+<h4 class="font-headline-md text-lg text-primary leading-snug mt-1 group-hover:underline underline-offset-4">New lab equipment arrives</h4>
+<span class="font-label-sm text-label-sm text-on-surface-variant/80 mt-1 block">2 min read</span>
+</div>
+<!-- Card 3 -->
+<div class="flex-none w-[70%] snap-start group cursor-pointer bg-surface-container-low p-stack-md rounded-lg border border-outline-variant/20">
+
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary/70">Campus Life</span>
+<h4 class="font-headline-md text-lg text-primary leading-snug mt-1 group-hover:underline underline-offset-4">Spring formal dates set</h4>
+<span class="font-label-sm text-label-sm text-on-surface-variant/80 mt-1 block">2 min read</span>
+</div>
+<!-- Card 4 -->
+<div class="flex-none w-[70%] snap-start group cursor-pointer bg-surface-container-low p-stack-md rounded-lg border border-outline-variant/20">
+
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary/70">Education</span>
+<h4 class="font-headline-md text-lg text-primary leading-snug mt-1 group-hover:underline underline-offset-4">Study tips for finals week</h4>
+<span class="font-label-sm text-label-sm text-on-surface-variant/80 mt-1 block">2 min read</span>
+</div>
+<!-- Spacer for end of scroll -->
+<div class="flex-none w-4 bg-surface-container-low p-stack-md rounded-lg border border-outline-variant/20"></div>
+</div>
+</section>
+<!-- This Week at PHS Section -->
+<section class="mb-section-gap">
+<div class="px-container-margin flex items-center justify-between mb-stack-lg">
+<h3 class="font-headline-md text-headline-md text-primary">This Week at PHS</h3>
+<button class="font-label-md text-label-md text-primary flex items-center gap-1">
+                    View all <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<!-- Bento-ish Grid Feed Items -->
+<div class="px-container-margin grid grid-cols-1 md:grid-cols-3 gap-stack-lg">
+<!-- Story 1: News -->
+<div class="group flex flex-col gap-stack-sm cursor-pointer">
+<div class="aspect-[4/3] bg-surface-container rounded overflow-hidden mb-2">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A dignified shot of a local town council chamber with a small public library branch visible through wide glass windows. The lighting is soft morning sunlight, casting long shadows on polished wooden tables. The style is modern corporate photography, emphasizing civic order and community collaboration. The palette features muted blues and warm wood tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeAxX-5ncaVJhxG09LNnTrontkdo8fivtU_7-4C3awl4r2slil8CB1VyYhPjXrwOTiLKIXxuYAilRiV25f4-eL08upY54xlOhuEgWTwy0DK6X82XRJYiuNtP0TzqQrKPxdP0C4XYUhNLNDAL0T6Zkf9f-kH17SlipvE6RxY_NocI-qvmtNeV-Ol8wDhAaw-_e6shNl8PZXjoMqydgiyY6HAwnnW-nzSrihrfxdEOi58Zoe6k7OlQo6t3gAipusjrWQXT_9UJNlfC8">
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">News</span>
+<h4 class="font-headline-md text-headline-md text-primary leading-snug group-hover:underline underline-offset-4 decoration-1">Library and Town Council reach budget compromise</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">After weeks of deliberation, the two bodies have reached a mutual agreement that preserves late-night library hours.</p>
+</div>
+<!-- Story 2: Sports -->
+<div class="group flex flex-col gap-stack-sm cursor-pointer">
+<div class="aspect-[4/3] bg-surface-container rounded overflow-hidden mb-2">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A dynamic sports action shot of a high school baseball player in mid-swing at a pristine green campus field. The late afternoon golden hour light catches the movement and dust in the air. The photo is crisp with a shallow depth of field, highlighting the athlete's concentration and athletic form against the blurred spectator stands. Professional athletic photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXK4qPyQDm7SNmoP_XN8z_Mz1WfF_UZbE7bUBQSGiwN6TUl6FTQyCYGBGOa0dIZiPzfmtTqvBLqGy7buKcqY3hv_Q52mwl7b-MFCrbmflKOJz-WoymoXVPqYr4S8yxeuFbeq6WsAfz5Ka0IMr8Oj1-a0N3_1xi-2PuM7Ty-bWZCuwIKzlBU8npigBBR0mrTc-FE42iNwyvYgcRBTzUsNz-sQcWax734PdZD83Fpd4tz6PiU0vVorY-kwxRUB4avSFwm-E_OAgI5xc">
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Sports</span>
+<h4 class="font-headline-md text-headline-md text-primary leading-snug group-hover:underline underline-offset-4 decoration-1">Chase Hamerschlag '26: baseball</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">The junior pitcher discusses his record-breaking season and his aspirations for collegiate play next fall.</p>
+</div>
+<!-- Story 3: Opinions -->
+<div class="group flex flex-col gap-stack-sm cursor-pointer">
+<div class="aspect-[4/3] bg-surface-container rounded overflow-hidden mb-2">
+<img class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A thoughtfully composed interior of a modern kitchen classroom at a high school. Stainless steel counters are clean and bright, with organized cooking utensils. The shot is bright and airy, symbolizing domestic education and practical skill-building. The mood is optimistic and instructional, captured in a clean, minimalist architectural photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBjIUxd35kbE8dS8IJOQgvDx-Dgb_xzIUxzpXnJOwxnvGvixaFT-u_gDbxpgdYj2lwLL9Mpj8-aykzCFRYWj-6W44u0l4rUOMkyBH6HoWDNdnNiRZYAq6U0-udOCNG9Uj32bVPhUk0Bx13i-0MftYWejj_n6P93pMGq1zHJLlyxkfxStEorM-BaCtwrm_HTvM27M0ZNvnhMKs4PmdgeCbdvn3_sHDnK8i4O4Xm0tKWPkV-_1C0vFLGCBKc_JPwSXb2cVTae9c4ufXc">
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Opinions</span>
+<h4 class="font-headline-md text-headline-md text-primary leading-snug group-hover:underline underline-offset-4 decoration-1">Bring back home economics</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">An editorial arguing for the re-integration of essential life skills into the standard secondary school curriculum.</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface border-t border-outline-variant/10 shadow-sm">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<!-- Outreach -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="font-label-sm text-label-sm">Outreach</span>
+</a>
+<!-- Polls -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">ballot</span>
+<span class="font-label-sm text-label-sm">Polls</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:text-primary active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<!-- Subtle Scroll Micro-interaction -->
+<script>
+        let lastScrollTop = 0;
+        const header = document.querySelector('header');
+        
+        window.addEventListener('scroll', () => {
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // Scrolling down
+                header.style.transform = 'translateY(-100%)';
+            } else {
+                // Scrolling up
+                header.style.transform = 'translateY(0)';
+            }
+            header.style.transition = 'transform 0.3s ease-in-out';
+            lastScrollTop = scrollTop;
+        });
+    </script>
+
+
+</body></html>

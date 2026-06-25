@@ -1,0 +1,292 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>The Campus Chronicle | Outreach</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts: Playfair Display & Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#e7eeff",
+                    "outline": "#74777f",
+                    "surface": "#f9f9ff",
+                    "inverse-on-surface": "#ebf1ff",
+                    "tertiary": "#715c00",
+                    "on-tertiary-fixed": "#231b00",
+                    "on-tertiary": "#ffffff",
+                    "surface-bright": "#f9f9ff",
+                    "tertiary-container": "#c9a82c",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#434749",
+                    "on-tertiary-fixed-variant": "#564500",
+                    "error": "#ba1a1a",
+                    "inverse-primary": "#adc7f7",
+                    "tertiary-fixed": "#ffe17c",
+                    "primary": "#002045",
+                    "primary-container": "#1a365d",
+                    "secondary": "#5b5f61",
+                    "on-primary-fixed-variant": "#2d476f",
+                    "background": "#f9f9ff",
+                    "tertiary-fixed-dim": "#e6c446",
+                    "inverse-surface": "#273141",
+                    "secondary-fixed-dim": "#c3c7c9",
+                    "surface-tint": "#455f88",
+                    "on-primary-container": "#86a0cd",
+                    "primary-fixed-dim": "#adc7f7",
+                    "on-secondary-container": "#5f6365",
+                    "on-tertiary-container": "#4d3e00",
+                    "surface-container-high": "#dee8ff",
+                    "on-secondary": "#ffffff",
+                    "surface-dim": "#d0daf0",
+                    "on-primary-fixed": "#001b3c",
+                    "secondary-container": "#dde0e2",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#e0e3e5",
+                    "surface-container-highest": "#d9e3f9",
+                    "on-secondary-fixed": "#181c1e",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#43474e",
+                    "on-error-container": "#93000a",
+                    "surface-variant": "#d9e3f9",
+                    "on-surface": "#121c2c",
+                    "primary-fixed": "#d6e3ff",
+                    "outline-variant": "#c4c6cf"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "section-gap": "40px",
+                    "stack-lg": "24px",
+                    "gutter": "16px",
+                    "container-margin": "20px",
+                    "stack-md": "16px",
+                    "stack-sm": "8px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "headline-lg": ["Playfair Display"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Playfair Display"],
+                    "display-lg": ["Playfair Display"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .card-shadow {
+            box-shadow: 0px 4px 12px rgba(0, 32, 69, 0.05);
+        }
+        .card-shadow:hover {
+            box-shadow: 0px 8px 24px rgba(0, 32, 69, 0.1);
+        }
+        .newspaper-border {
+            border-bottom: 1px solid rgba(0, 32, 69, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface dark:bg-surface-dim border-b border-outline-variant/10">
+
+<h1 class="font-headline-md text-headline-md-mobile md:text-headline-md font-bold text-primary dark:text-primary-fixed-dim">The Tower</h1>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors active:scale-95 duration-150 p-2 rounded-full">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="pt-24 pb-32 px-container-margin max-w-2xl mx-auto min-h-screen">
+<!-- Outreach Header -->
+<div class="mb-section-gap">
+<p class="font-label-sm text-label-sm text-tertiary uppercase tracking-widest mb-stack-sm">Community Outreach</p>
+<h2 class="font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-stack-md leading-tight">Get Involved With Your Newspaper</h2>
+<div class="h-1 w-16 bg-primary rounded-full"></div>
+</div>
+<!-- Modular Card List -->
+<div class="flex flex-col gap-stack-lg">
+<!-- Card 1: Letter to the Editor -->
+<section class="group bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden card-shadow transition-all duration-300 duration-700 opacity-100 translate-y-0">
+<div class="p-gutter md:p-stack-lg flex flex-col gap-stack-lg">
+
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-stack-sm text-tertiary mb-stack-sm">
+<span class="material-symbols-outlined text-[20px]">history_edu</span>
+<span class="font-label-sm text-label-sm">LETTERS</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-sm">Have Your Say</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Submit a letter to share your voice with the campus community. We value diverse perspectives and critical dialogue on matters that impact us all.</p>
+</div>
+<div class="mt-stack-lg">
+<button class="bg-primary text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-fit shadow-sm">
+                                Write a Letter
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Card 2: Student Polls -->
+<section class="group bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden card-shadow transition-all duration-300 duration-700 opacity-100 translate-y-0">
+<div class="p-gutter md:p-stack-lg flex flex-col gap-stack-lg">
+
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-stack-sm text-tertiary mb-stack-sm">
+<span class="material-symbols-outlined text-[20px]">ballot</span>
+<span class="font-label-sm text-label-sm">CAMPUS PULSE</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-sm">Campus Pulse</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Cast your vote on current topics and see what your peers are thinking. Our weekly polls shape our upcoming editorial features.</p>
+</div>
+<div class="mt-stack-lg">
+<button class="bg-primary text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-fit shadow-sm">
+                                Take a Poll
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Card 3: Join the Team -->
+<section class="group bg-surface-container-lowest rounded-lg border border-outline-variant/10 overflow-hidden card-shadow transition-all duration-300 duration-700 opacity-100 translate-y-0">
+<div class="p-gutter md:p-stack-lg flex flex-col gap-stack-lg">
+
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-stack-sm text-tertiary mb-stack-sm">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+<span class="font-label-sm text-label-sm">OPPORTUNITIES</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-stack-sm">Become a Contributor</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Passionate about writing, photography, or design? We want you! Join a legacy of award-winning journalism and build your professional portfolio.</p>
+</div>
+<div class="mt-stack-lg">
+<button class="bg-primary text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg hover:brightness-110 active:scale-95 transition-all w-full md:w-fit shadow-sm">
+                                Interest Form
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Note -->
+<div class="mt-section-gap text-center pb-stack-lg">
+<p class="font-body-md text-body-md text-secondary italic">"The voice of the students, for the students." — Est. 1894</p>
+<div class="flex justify-center gap-stack-md mt-stack-md opacity-40">
+<span class="material-symbols-outlined">newspaper</span>
+<span class="material-symbols-outlined">school</span>
+<span class="material-symbols-outlined">diversity_3</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 pb-safe bg-surface dark:bg-surface-dim border-t border-outline-variant/10 shadow-sm md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-4 py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary text-on-primary-container dark:text-on-primary rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">campaign</span>
+<span class="font-label-sm text-label-sm mt-1">Outreach</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-4 py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">ballot</span>
+<span class="font-label-sm text-label-sm mt-1">Polls</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-secondary-fixed-dim px-4 py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm mt-1">Profile</span>
+</a>
+</nav>
+<!-- Desktop Navigation Drawer (Conditional) -->
+<aside class="hidden md:flex fixed inset-y-0 left-0 z-[60] w-80 flex-col p-4 bg-surface-container-lowest dark:bg-inverse-surface rounded-r-xl shadow-lg transform -translate-x-full transition-all duration-300" id="sideNav">
+<div class="flex justify-between items-center mb-stack-lg border-b border-outline-variant/10 pb-stack-sm">
+<h2 class="font-headline-lg text-headline-lg text-primary">Sections</h2>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors" onclick="toggleNav()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<nav class="flex flex-col gap-stack-sm">
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">article</span> News
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">forum</span> Opinion
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 bg-primary-container text-on-primary-container font-bold rounded-full transition-all duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">groups</span> Outreach
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">event</span> Events
+            </a>
+<a class="flex items-center gap-stack-md px-4 py-3 text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 rounded-full font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">history</span> Archive
+            </a>
+</nav>
+</aside>
+<script>
+        function toggleNav() {
+            const nav = document.getElementById('sideNav');
+            if (nav.classList.contains('-translate-x-full')) {
+                nav.classList.remove('-translate-x-full');
+            } else {
+                nav.classList.add('-translate-x-full');
+            }
+        }
+
+        // Apply interactive logic to the TopAppBar Menu
+        document.querySelector('header button:first-child').addEventListener('click', toggleNav);
+
+        // Simple scroll reveal for cards
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-8');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            section.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-8');
+            observer.observe(section);
+        });
+    </script>
+
+
+</body></html>

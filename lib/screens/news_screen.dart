@@ -199,7 +199,7 @@ class NewsScreenState extends State<NewsScreen> {
     return Container(
       color: Colors.white,
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -325,29 +325,32 @@ class NewsScreenState extends State<NewsScreen> {
             .map((id) => _articleCache[id]!)
             .toList();
         if (articles.isNotEmpty) {
-          widgets.add(SidescrollRow(
-            articles: articles,
-            latestYear: _latestYear,
-            latestMonth: _latestMonth,
+          widgets.add(Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: SidescrollRow(
+              articles: articles,
+              latestYear: _latestYear,
+              latestMonth: _latestMonth,
+            ),
           ));
         }
       } else if (line == 'Divider') {
         widgets.add(const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Divider(height: 1, color: Color(0xFFE0E0E0)),
         ));
       } else if (line.startsWith('Text(')) {
         final match = RegExp(r'Text\("(.+)"\)').firstMatch(line);
         if (match != null) {
           widgets.add(Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
             child: SizedBox(
               width: double.infinity,
               child: Text(
                 match.group(1)!,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF1A1A2E),
                   letterSpacing: 0.2,
@@ -359,7 +362,11 @@ class NewsScreenState extends State<NewsScreen> {
       }
     }
 
-return ListView(padding: const EdgeInsets.only(top: 8), children: widgets);  }
+    return ListView(
+      padding: const EdgeInsets.only(top: 12, bottom: 28),
+      children: widgets,
+    );
+  }
 
   // ── List view ──────────────────────────────────────────────────────────────
 
@@ -389,11 +396,11 @@ return ListView(padding: const EdgeInsets.only(top: 8), children: widgets);  }
 
         if (item == 'divider') {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
             child: Row(children: [
               const Expanded(child: Divider()),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Text(
                   'Earlier Issues',
                   style: TextStyle(
@@ -430,7 +437,7 @@ return ListView(padding: const EdgeInsets.only(top: 8), children: widgets);  }
           children: [
             if (showHeader)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                 child: Row(children: [
                   Text(
                     '${_monthName(article.month)} ${article.year}',
@@ -511,7 +518,7 @@ class _ArticleListTileState extends State<_ArticleListTile> {
     return InkWell(
       onTap: widget.onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -526,23 +533,23 @@ class _ArticleListTileState extends State<_ArticleListTile> {
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.1,
-                      color: Color(0xFF999999),
+                      color: Color(0xFF715C00), // newspaper gold eyebrow
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 8),
                   Text(
                     widget.article.title,
                     style: GoogleFonts.playfairDisplay(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF1A1A2E),
-                      height: 1.3,
+                      height: 1.4,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (widget.article.authors.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       widget.article.authors.join(', '),
                       style: const TextStyle(
@@ -558,7 +565,7 @@ class _ArticleListTileState extends State<_ArticleListTile> {
             ),
             // Thumbnail — only if image loaded successfully
             if (showImg) ...[
-              const SizedBox(width: 14),
+              const SizedBox(width: 18),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: Image.network(
