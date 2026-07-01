@@ -85,7 +85,7 @@ class SearchScreenState extends State<SearchScreen> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A2E),
+                          color: Colors.black,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -108,7 +108,7 @@ class SearchScreenState extends State<SearchScreen> {
                                 onSubmitted: _search,
                                 style: const TextStyle(
                                   fontSize: 15,
-                                  color: Color(0xFF1A1A2E),
+                                  color: Colors.black,
                                 ),
                                 decoration: const InputDecoration(
                                   hintText: 'Search articles...',
@@ -146,7 +146,7 @@ class SearchScreenState extends State<SearchScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 14, vertical: 7),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF1A1A2E),
+                                    color: const Color(0xFF072636),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: const Text(
@@ -232,14 +232,25 @@ class SearchScreenState extends State<SearchScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Row(children: [
-                                            Text(
-                                              _catLabel(article.category)
-                                                  .toUpperCase(),
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: 1.0,
-                                                color: Color(0xFF666666),
+                                            Container(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                  horizontal: 7, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFA31621),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                _catLabel(article.category)
+                                                    .toUpperCase(),
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 1.0,
+                                                  height: 1.0,
+                                                  color: Colors.white,
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 8),
@@ -257,20 +268,18 @@ class SearchScreenState extends State<SearchScreen> {
                                             style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1A1A2E),
+                                              color: Colors.black,
                                               height: 1.3,
                                             ),
                                           ),
-                                          if (article.authors.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              article.authors.join(', '),
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey[500],
-                                              ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            article.authorLine,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[500],
                                             ),
-                                          ],
+                                          ),
                                         ],
                                       ),
                                     ),

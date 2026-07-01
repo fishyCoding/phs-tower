@@ -21,6 +21,13 @@ class Article {
     this.content = '',
   });
 
+  /// Byline for display, falling back to the masthead when no authors are
+  /// credited on the article.
+  String get authorLine {
+    final named = authors.where((a) => a.trim().isNotEmpty).toList();
+    return named.isEmpty ? 'Editorial Board' : named.join(', ');
+  }
+
   Article copyWith({String? content}) {
     return Article(
       id: id,

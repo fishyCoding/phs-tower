@@ -3,15 +3,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../widgets/google_form_webview.dart';
 import 'letter_to_editor_screen.dart';
+import '../debug/typography.dart';
 
 class OutreachScreen extends StatelessWidget {
   final GoogleSignInAccount? user;
   final VoidCallback? onSignIn;
 
-  const OutreachScreen({super.key, this.user, this.onSignIn});
+  /// Testing-only: when true the section unlocks without a real sign-in.
+  final bool devBypass;
 
-  static const _ink = Color(0xFF1A1A2E);
-  static const _accent = Color(0xFF715C00); // newspaper gold, for eyebrow labels
+  /// Testing-only: called by the "skip sign-in" button on the gate.
+  final VoidCallback? onDevBypass;
+
+  const OutreachScreen({
+    super.key,
+    this.user,
+    this.onSignIn,
+    this.devBypass = false,
+    this.onDevBypass,
+  });
+
+  static const _ink = Color(0xFF072636); // blue accent — icons, bars, fills
+  static const _accent = Color(0xFF072636); // blue accent for eyebrow labels
 
   // "Join the Tower" interest form.
   static const _joinFormUrl =
@@ -22,7 +35,9 @@ class OutreachScreen extends StatelessWidget {
     return Container(
       color: Colors.white,
       child: SafeArea(
-        child: user == null ? _buildSignInGate(context) : _buildMenu(context),
+        child: (user == null && !devBypass)
+            ? _buildSignInGate(context)
+            : _buildMenu(context),
       ),
     );
   }
@@ -40,11 +55,7 @@ class OutreachScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               'Sign in required',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: _ink,
-              ),
+              style: headline(context, size: 24, color: Colors.black),
             ),
             const SizedBox(height: 10),
             const Text(
@@ -90,6 +101,15 @@ class OutreachScreen extends StatelessWidget {
                 ),
               ),
             ),
+            // Testing-only shortcut — bypasses Google/Supabase auth entirely.
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: onDevBypass,
+              child: const Text(
+                'Skip sign-in (testing)',
+                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+              ),
+            ),
           ],
         ),
       ),
@@ -115,12 +135,7 @@ class OutreachScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Get Involved',
-          style: GoogleFonts.playfairDisplay(
-            fontSize: 34,
-            fontWeight: FontWeight.bold,
-            height: 1.1,
-            color: _ink,
-          ),
+          style: headline(context, size: 34, color: Colors.black),
         ),
         const SizedBox(height: 12),
         Container(width: 56, height: 4, color: _ink),
@@ -177,11 +192,11 @@ class OutreachScreen extends StatelessWidget {
           backgroundColor: Colors.white,
           appBar: AppBar(
             backgroundColor: Colors.white,
-            foregroundColor: _ink,
+            foregroundColor: Colors.black,
             elevation: 0,
             scrolledUnderElevation: 0,
             title: Text(title,
-                style: GoogleFonts.playfairDisplay(color: _ink)),
+                style: headline(context, size: 20, color: Colors.black)),
           ),
           body: SafeArea(child: body),
         ),
@@ -209,8 +224,8 @@ class _OutreachCard extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _ink = Color(0xFF1A1A2E);
-  static const _accent = Color(0xFF715C00);
+  static const _ink = Color(0xFF072636);
+  static const _accent = Color(0xFF072636);
 
   @override
   Widget build(BuildContext context) {
@@ -253,11 +268,7 @@ class _OutreachCard extends StatelessWidget {
               const SizedBox(height: 10),
               Text(
                 title,
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: _ink,
-                ),
+                style: headline(context, size: 22, color: Colors.black),
               ),
               const SizedBox(height: 6),
               Text(

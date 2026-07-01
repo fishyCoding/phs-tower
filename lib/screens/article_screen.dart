@@ -3,6 +3,17 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../debug/typography.dart';
+
+/// Byline for a raw article map, falling back to the masthead when no authors
+/// are credited.
+String _authorLine(List? authors) {
+  final named = (authors ?? [])
+      .where((a) => (a?.toString().trim() ?? '').isNotEmpty)
+      .map((a) => a.toString())
+      .toList();
+  return named.isEmpty ? 'Editorial Board' : named.join(', ');
+}
 
 class ArticleScreen extends StatefulWidget {
   final int articleId;
@@ -69,7 +80,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
     }
   }
 
-  static const _ink = Color(0xFF1A1A2E);
+  static const _ink = Color(0xFF000000); // body & headline text — black
   static const _link = Color(0xFF1A4E8A);
 
   /// Renders the article body as Markdown. The DB stores single `\n` as soft
@@ -92,12 +103,9 @@ class _ArticleScreenState extends State<ArticleScreen> {
       styleSheet: MarkdownStyleSheet(
         p: const TextStyle(fontSize: 16, height: 1.65, color: _ink),
         pPadding: const EdgeInsets.only(bottom: 16),
-        h1: GoogleFonts.playfairDisplay(
-            fontSize: 24, fontWeight: FontWeight.bold, color: _ink, height: 1.3),
-        h2: GoogleFonts.playfairDisplay(
-            fontSize: 21, fontWeight: FontWeight.bold, color: _ink, height: 1.3),
-        h3: GoogleFonts.playfairDisplay(
-            fontSize: 18, fontWeight: FontWeight.w600, color: _ink, height: 1.3),
+        h1: headline(context, size: 24, color: _ink),
+        h2: headline(context, size: 21, color: _ink),
+        h3: headline(context, size: 18, color: _ink),
         h1Padding: const EdgeInsets.only(top: 8, bottom: 6),
         h2Padding: const EdgeInsets.only(top: 8, bottom: 6),
         h3Padding: const EdgeInsets.only(top: 8, bottom: 4),
@@ -133,13 +141,11 @@ class _ArticleScreenState extends State<ArticleScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A2E),
+        foregroundColor: Colors.black,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: const BackButton(),
-        title: Text('Article', style: GoogleFonts.playfairDisplay(
-          color: const Color(0xFF1A1A2E),
-        )),
+        title: Text('Article', style: headline(context, size: 20, color: Colors.black)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -163,25 +169,31 @@ class _ArticleScreenState extends State<ArticleScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _catLabel(_article!['category'] ?? '').toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.0,
-                                color: Color(0xFF666666),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFA31621),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _catLabel(_article!['category'] ?? '')
+                                    .toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.0,
+                                  height: 1.0,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 6),
                             Text(_article!['title'] ?? '',
-                                style: GoogleFonts.playfairDisplay(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF1A1A2E),
-                                    height: 1.25)),
+                                style: headline(context, size: 26, color: Colors.black)),
                             const SizedBox(height: 10),
                             Text(
-                              (_article!['authors'] as List?)?.join(', ') ?? '',
+                              _authorLine(_article!['authors'] as List?),
                               style: TextStyle(color: Colors.grey[500], fontSize: 13),
                             ),
                             const SizedBox(height: 3),
@@ -272,22 +284,15 @@ class _RelatedArticleTile extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         article['title'] ?? '',
-                        style: GoogleFonts.playfairDisplay(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1A1A2E),
-                          height: 1.3,
-                        ),
+                        style: headline(context, size: 15, color: Colors.black),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if ((article['authors'] as List?)?.isNotEmpty == true) ...[
-                        const SizedBox(height: 5),
-                        Text(
-                          (article['authors'] as List).join(', '),
-                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                        ),
-                      ],
+                      const SizedBox(height: 5),
+                      Text(
+                        _authorLine(article['authors'] as List?),
+                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      ),
                     ],
                   ),
                 ),

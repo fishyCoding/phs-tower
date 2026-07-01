@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/crossword.dart';
 import '../widgets/crossword_widget.dart';
 import 'minesweeper_screen.dart';
+import '../debug/typography.dart';
 
 // ── Games Hub ─────────────────────────────────────────────────────────────────
 
@@ -24,10 +24,7 @@ class GamesScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Games',
-                    style: GoogleFonts.playfairDisplay(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1A1A2E))),
+                    style: headline(context, size: 32, color: Colors.black)),
                 const SizedBox(height: 4),
                 const Text('Play games from The Tower',
                     style: TextStyle(
@@ -47,7 +44,7 @@ class GamesScreen extends StatelessWidget {
                   subtitle: 'Weekly puzzles',
                   description: 'Test your vocabulary with crosswords written by Tower staff.',
                   icon: Icons.grid_on_rounded,
-                  accentColor: const Color(0xFF1A1A2E),
+                  accentColor: const Color(0xFF072636),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const CrosswordListScreen())),
                 ),
@@ -130,12 +127,7 @@ class _GameCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     title,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      height: 1.1,
-                    ),
+                    style: headline(context, size: 22, color: Colors.white),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -230,7 +222,7 @@ class _CrosswordListScreenState extends State<CrosswordListScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: Text('Crossword', style: GoogleFonts.playfairDisplay()),
+        title: Text('Crossword', style: headline(context, size: 20)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -247,14 +239,13 @@ class _CrosswordListScreenState extends State<CrosswordListScreen> {
                           leading: Container(
                             width: 48, height: 48,
                             decoration: BoxDecoration(
-                              color: Colors.blue[700]!.withOpacity(0.1),
+                              color: const Color(0xFF072636).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Icon(Icons.grid_on, color: Colors.blue[700]),
+                            child: const Icon(Icons.grid_on, color: Color(0xFF072636)),
                           ),
                           title: Text(cw.title,
-                              style: GoogleFonts.playfairDisplay(
-                                  fontWeight: FontWeight.w600)),
+                              style: headline(context, size: 16)),
                           subtitle: Text('${cw.author} · ${_formatDate(cw.date)}'),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => Navigator.push(
@@ -285,8 +276,7 @@ class CrosswordPlayScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(crossword.title,
-                style: GoogleFonts.playfairDisplay(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+                style: headline(context, size: 16)),
             Text(crossword.author, style: const TextStyle(fontSize: 12)),
           ],
         ),

@@ -329,7 +329,7 @@ class _CrosswordWidgetState extends State<CrosswordWidget> {
     if (isBlack) {
       bgColor = Colors.black;
     } else if (isSelected) {
-      bgColor = Colors.yellow[300]!;
+      bgColor = Colors.blue[300]!;
     } else if (isHighlighted) {
       bgColor = Colors.blue[100]!;
     } else {

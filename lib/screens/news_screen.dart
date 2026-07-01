@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/article.dart';
 import '../widgets/article_card.dart';
 import '../screens/article_screen.dart';
+import '../debug/typography.dart';
 
 class NewsScreen extends StatefulWidget {
   final GoogleSignInAccount? user;
@@ -209,12 +209,7 @@ class NewsScreenState extends State<NewsScreen> {
             children: [
               Text(
                 'The Tower',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1A1A2E),
-                  letterSpacing: -0.5,
-                ),
+                style: headline(context, size: 28, color: Colors.black),
               ),
               if (_selectedCategory != 'All') ...[
                 const SizedBox(height: 4),
@@ -242,7 +237,7 @@ class NewsScreenState extends State<NewsScreen> {
                       backgroundImage: user.photoUrl != null
                           ? NetworkImage(user.photoUrl!)
                           : null,
-                      backgroundColor: const Color(0xFF1A1A2E),
+                      backgroundColor: const Color(0xFF072636),
                       child: user.photoUrl == null
                           ? Text(
                               (user.displayName ?? user.email)[0].toUpperCase(),
@@ -270,7 +265,7 @@ class NewsScreenState extends State<NewsScreen> {
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.login,
                               size: 14,
-                              color: Color(0xFF1A1A2E),
+                              color: Color(0xFF072636),
                             ),
                           ),
                           const SizedBox(width: 5),
@@ -279,7 +274,7 @@ class NewsScreenState extends State<NewsScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF1A1A2E),
+                              color: Color(0xFF072636),
                             ),
                           ),
                         ],
@@ -352,7 +347,7 @@ class NewsScreenState extends State<NewsScreen> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
+                  color: Color(0xFF072636),
                   letterSpacing: 0.2,
                 ),
               ),
@@ -445,7 +440,7 @@ class NewsScreenState extends State<NewsScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: isLatest
-                          ? const Color(0xFF1A1A2E)
+                          ? const Color(0xFF072636)
                           : Colors.grey[500],
                     ),
                   ),
@@ -455,7 +450,7 @@ class NewsScreenState extends State<NewsScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A2E),
+                        color: const Color(0xFFA31621),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
@@ -527,39 +522,41 @@ class _ArticleListTileState extends State<_ArticleListTile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _catLabel(widget.article.category).toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.1,
-                      color: Color(0xFF715C00), // newspaper gold eyebrow
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFA31621), // editorial red kicker
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _catLabel(widget.article.category).toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        height: 1.0,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     widget.article.title,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
-                      height: 1.4,
-                    ),
+                    style: headline(context, size: 16, color: Colors.black),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (widget.article.authors.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.article.authors.join(', '),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFAAAAAA),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.article.authorLine,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFFAAAAAA),
                     ),
-                  ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../debug/typography.dart';
 
 class LetterToEditorScreen extends StatefulWidget {
   const LetterToEditorScreen({super.key});
@@ -10,7 +10,7 @@ class LetterToEditorScreen extends StatefulWidget {
 }
 
 class _LetterToEditorScreenState extends State<LetterToEditorScreen> {
-  static const _ink = Color(0xFF1A1A2E);
+  static const _ink = Color(0xFF072636);
 
   final _subjectCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
@@ -64,11 +64,11 @@ class _LetterToEditorScreenState extends State<LetterToEditorScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: _ink,
+        foregroundColor: Colors.black,
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text('Letter to the Editor',
-            style: GoogleFonts.playfairDisplay(color: _ink)),
+            style: headline(context, size: 20, color: Colors.black)),
       ),
       body: SafeArea(
         child: Padding(

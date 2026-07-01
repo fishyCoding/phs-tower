@@ -5,6 +5,7 @@ import 'screens/news_screen.dart';
 import 'screens/games_screen.dart';
 import 'screens/outreach_screen.dart';
 import 'screens/search_screen.dart';
+import 'debug/typography.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,8 +26,19 @@ class PHSTowerApp extends StatelessWidget {
     return MaterialApp(
       title: 'PHS Tower',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A1A2E)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF072636)),
         useMaterial3: true,
+      ),
+      // Wrap the whole navigator in the typography scope so every screen (and
+      // pushed route) rebuilds live when the debug panel changes a setting.
+      builder: (context, child) => TypographyScope(
+        controller: typography,
+        child: Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            if (kTypographyPanelEnabled) const TypographyDebugPanel(),
+          ],
+        ),
       ),
       home: const MainScreen(),
     );
@@ -86,6 +98,9 @@ class _MainScreenState extends State<MainScreen>
   String _topPage      = 'news';
   String _newsSubPage  = 'all';
   bool   _newsExpanded = true;
+
+  // Testing-only: lets the Outreach section be opened without a real sign-in.
+  bool   _devBypass    = false;
 
   late final AnimationController _animController;
   late final Animation<double>   _expandAnim;
@@ -297,7 +312,12 @@ class _MainScreenState extends State<MainScreen>
     }
     if (_topPage == 'games')    return const GamesScreen();
     if (_topPage == 'outreach') {
-      return OutreachScreen(user: _user, onSignIn: _handleSignIn);
+      return OutreachScreen(
+        user: _user,
+        onSignIn: _handleSignIn,
+        devBypass: _devBypass,
+        onDevBypass: () => setState(() => _devBypass = true),
+      );
     }
     return const SizedBox.shrink();
   }
@@ -351,7 +371,7 @@ class _MainScreenState extends State<MainScreen>
                                     ? const Icon(
                                         Icons.keyboard_arrow_right,
                                         size: 14,
-                                        color: Color(0xFF1A1A2E),
+                                        color: Color(0xFF072636),
                                       )
                                     : null,
                               ),
@@ -398,7 +418,7 @@ class _MainScreenState extends State<MainScreen>
                                           ? Icons.keyboard_arrow_left
                                           : Icons.keyboard_arrow_right,
                                       size: 14,
-                                      color: const Color(0xFF1A1A2E),
+                                      color: const Color(0xFF072636),
                                     )
                                   : null,
                             ),
@@ -490,7 +510,7 @@ class _NavBtn extends StatelessWidget {
     this.trailing,
   });
 
-  static const _active   = Color(0xFF1A1A2E);
+  static const _active   = Color(0xFF072636);
   static const _inactive = Color(0xFF999999);
 
   @override
