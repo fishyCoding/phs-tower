@@ -5,6 +5,7 @@ import 'screens/news_screen.dart';
 import 'screens/games_screen.dart';
 import 'screens/outreach_screen.dart';
 import 'screens/search_screen.dart';
+import 'screens/vanguard_list_screen.dart';
 import 'services/bookmarks.dart';
 import 'services/notifications.dart';
 import 'debug/typography.dart';
@@ -83,6 +84,7 @@ const _newsSubEntries = [
   _NavEntry('opinions',      'Opinions', Icons.lightbulb_outline,          _NavKind.newsSub),
   _NavEntry('arts-entertainment', 'Arts', Icons.palette_outlined,         _NavKind.newsSub),
   _NavEntry('sports',        'Sports',   Icons.sports_basketball_outlined, _NavKind.newsSub),
+  _NavEntry('vanguard',      'Vanguard', Icons.auto_stories_outlined,      _NavKind.newsSub),
   _NavEntry('search',        'Search',   Icons.search,                     _NavKind.newsSub),
 ];
 
@@ -263,7 +265,8 @@ class _MainScreenState extends State<MainScreen>
       _topPage     = 'news';
       _newsSubPage = subId;
     });
-    if (subId != 'search') {
+    // Search and Vanguard are screens of their own, not article categories.
+    if (subId != 'search' && subId != 'vanguard') {
       final cat = subId == 'all' ? 'All' : subId;
       _newsKey.currentState?.selectCategory(cat);
     }
@@ -289,7 +292,11 @@ class _MainScreenState extends State<MainScreen>
   Widget _buildBody() {
     if (_topPage == 'news') {
       return IndexedStack(
-        index: _newsSubPage == 'search' ? 1 : 0,
+        index: _newsSubPage == 'search'
+            ? 1
+            : _newsSubPage == 'vanguard'
+                ? 2
+                : 0,
         children: [
           NewsScreen(
             key: _newsKey,
@@ -298,6 +305,7 @@ class _MainScreenState extends State<MainScreen>
             onSignOut: _handleSignOut,
           ),
           SearchScreen(key: _searchKey),
+          const VanguardListScreen(),
         ],
       );
     }
