@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/article.dart';
 import '../widgets/article_card.dart';
 import '../screens/article_screen.dart';
+import '../screens/saved_screen.dart';
 import '../debug/typography.dart';
 
 class NewsScreen extends StatefulWidget {
@@ -86,10 +88,28 @@ class NewsScreenState extends State<NewsScreen> {
     } catch (_) {}
   }
 
+  /// Loads the front-page layout script from the `app_layout` table (latest
+  /// published row wins), so editors can re-arrange the front page without an
+  /// app release. Falls back to the bundled layout if unreachable or empty.
   Future<void> _loadLayout() async {
     try {
+      final row = await Supabase.instance.client
+          .from('app_layout')
+          .select('layout')
+          .eq('published', true)
+          .order('year', ascending: false)
+          .order('month', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      final layout = row?['layout'] as String?;
+      if (layout != null && layout.trim().isNotEmpty) {
+        if (mounted) setState(() => _layoutScript = layout);
+        return;
+      }
+    } catch (_) {}
+    try {
       final script = await rootBundle.loadString('lib/home_layout.txt');
-      setState(() => _layoutScript = script);
+      if (mounted) setState(() => _layoutScript = script);
     } catch (_) {}
   }
 
@@ -169,6 +189,61 @@ class NewsScreenState extends State<NewsScreen> {
   int get _latestYear => _articles.isNotEmpty ? _articles.first.year : 0;
   int get _latestMonth => _articles.isNotEmpty ? _articles.first.month : 0;
 
+  /// Pull-to-refresh: re-fetch the layout script and articles.
+  Future<void> _refresh() async {
+    await _loadLayout();
+    await _fetchArticles();
+  }
+
+  /// Grey placeholder blocks shown while the first load is in flight.
+  Widget _buildSkeleton() {
+    Widget block(double height, {double? width, double radius = 8}) =>
+        Container(
+          height: height,
+          width: width,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDEDED),
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        );
+
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      children: [
+        block(10, width: 80, radius: 4),
+        const SizedBox(height: 14),
+        block(28),
+        const SizedBox(height: 8),
+        block(28, width: 220),
+        const SizedBox(height: 16),
+        AspectRatio(aspectRatio: 16 / 9, child: block(0)),
+        const SizedBox(height: 28),
+        for (var i = 0; i < 3; i++) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    block(9, width: 60, radius: 4),
+                    const SizedBox(height: 8),
+                    block(16),
+                    const SizedBox(height: 6),
+                    block(16, width: 140),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 18),
+              block(72, width: 72),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -182,12 +257,17 @@ class NewsScreenState extends State<NewsScreen> {
           const Divider(height: 0, color: Color(0xFFE0E0E0)),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? _buildSkeleton()
                 : _error != null
                     ? Center(child: Text('Error: $_error'))
-                    : _selectedCategory == 'All' && _layoutScript != null
-                        ? _buildLayoutView()
-                        : _buildListView(),
+                    : RefreshIndicator(
+                        color: const Color(0xFF072636),
+                        onRefresh: _refresh,
+                        child: _selectedCategory == 'All' &&
+                                _layoutScript != null
+                            ? _buildLayoutView()
+                            : _buildListView(),
+                      ),
           ),
         ],
       ),
@@ -224,6 +304,22 @@ class NewsScreenState extends State<NewsScreen> {
                 ),
               ],
             ],
+          ),
+          // Saved articles top-left
+          Positioned(
+            left: 0,
+            top: 0,
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedScreen()),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.bookmark_border,
+                    size: 22, color: Color(0xFF072636)),
+              ),
+            ),
           ),
           // Sign-in button top-right
           Positioned(
@@ -358,6 +454,7 @@ class NewsScreenState extends State<NewsScreen> {
     }
 
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(top: 12, bottom: 28),
       children: widgets,
     );
@@ -384,6 +481,7 @@ class NewsScreenState extends State<NewsScreen> {
     }
 
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       itemCount: listItems.length,
       itemBuilder: (context, index) {
@@ -467,6 +565,8 @@ class NewsScreenState extends State<NewsScreen> {
               ),
             _ArticleListTile(
               article: article,
+              // On a section screen every tile is the same category — skip it.
+              showCategory: _selectedCategory == 'All',
               onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -487,7 +587,14 @@ class _ArticleListTile extends StatefulWidget {
   final Article article;
   final VoidCallback onTap;
 
-  const _ArticleListTile({required this.article, required this.onTap});
+  /// Hidden on section screens, where every article shares the same category.
+  final bool showCategory;
+
+  const _ArticleListTile({
+    required this.article,
+    required this.onTap,
+    this.showCategory = true,
+  });
 
   @override
   State<_ArticleListTile> createState() => _ArticleListTileState();
@@ -522,25 +629,27 @@ class _ArticleListTileState extends State<_ArticleListTile> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFA31621), // editorial red kicker
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      _catLabel(widget.article.category).toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                        height: 1.0,
-                        color: Colors.white,
+                  if (widget.showCategory) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA31621), // editorial red kicker
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _catLabel(widget.article.category).toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                          height: 1.0,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                  ],
                   Text(
                     widget.article.title,
                     style: headline(context, size: 16, color: Colors.black),
@@ -565,16 +674,18 @@ class _ArticleListTileState extends State<_ArticleListTile> {
               const SizedBox(width: 18),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: Image.network(
-                  rawImg,
+                child: CachedNetworkImage(
+                  imageUrl: rawImg,
                   width: imgSize,
                   height: imgSize,
                   // Decode at roughly display resolution instead of full-res so
                   // each thumbnail holds a small bitmap, not several MB.
-                  cacheWidth: 270,
-                  cacheHeight: 270,
+                  memCacheWidth: 270,
+                  memCacheHeight: 270,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) {
+                  placeholder: (_, __) =>
+                      Container(color: const Color(0xFFF0F0F0)),
+                  errorWidget: (_, __, ___) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted) setState(() => _imgFailed = true);
                     });

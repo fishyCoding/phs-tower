@@ -33,19 +33,40 @@ class SearchScreenState extends State<SearchScreen> {
       _results = [];
     });
     try {
-      final response = await Supabase.instance.client
-          .from('article')
-          .select('id, title, authors, month, year, category, img')
-          .eq('published', true)
-          .ilike('title', '%$q%')
-          .order('year', ascending: false)
-          .order('month', ascending: false)
-          .limit(40);
+      const sel = 'id, title, authors, month, year, category, img';
+      final client = Supabase.instance.client;
+
+      // Title matches rank first; description matches fill in behind them.
+      final responses = await Future.wait([
+        client
+            .from('article')
+            .select(sel)
+            .eq('published', true)
+            .ilike('title', '%$q%')
+            .order('year', ascending: false)
+            .order('month', ascending: false)
+            .limit(40),
+        client
+            .from('article')
+            .select(sel)
+            .eq('published', true)
+            .ilike('content-info', '%$q%')
+            .order('year', ascending: false)
+            .order('month', ascending: false)
+            .limit(40),
+      ]);
+
+      final seen = <int>{};
+      final merged = <Article>[];
+      for (final response in responses) {
+        for (final m in (response as List)) {
+          final article = Article.fromMap(Map<String, dynamic>.from(m));
+          if (seen.add(article.id)) merged.add(article);
+        }
+      }
 
       setState(() {
-        _results = (response as List)
-            .map((m) => Article.fromMap(Map<String, dynamic>.from(m)))
-            .toList();
+        _results = merged.take(40).toList();
         _loading = false;
       });
     } catch (e) {

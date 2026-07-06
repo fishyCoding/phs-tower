@@ -21,6 +21,10 @@ class Article {
     this.content = '',
   });
 
+  /// Public web page for this article on towerphs.com.
+  String get webUrl =>
+      'https://www.towerphs.com/articles/$year/$month/$category/$id';
+
   /// Byline for display, falling back to the masthead when no authors are
   /// credited on the article.
   String get authorLine {

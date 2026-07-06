@@ -21,7 +21,7 @@ Text("Culture & Creativity")
 LargeArticle(954)
 Sidescroll(1048,907,1014,1051,943,909)
 Divider
-Text("Health, Mind & Body")
+Text("Health, Mind & Dih^2")
 Sidescroll(1059,931,1021,1024,897,1063)
 Divider
 Text("Worth Revisiting")

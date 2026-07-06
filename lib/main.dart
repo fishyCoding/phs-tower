@@ -5,6 +5,8 @@ import 'screens/news_screen.dart';
 import 'screens/games_screen.dart';
 import 'screens/outreach_screen.dart';
 import 'screens/search_screen.dart';
+import 'services/bookmarks.dart';
+import 'services/notifications.dart';
 import 'debug/typography.dart';
 
 void main() async {
@@ -15,6 +17,8 @@ void main() async {
   );
   PaintingBinding.instance.imageCache.maximumSize = 200;
   PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024;
+  await BookmarksService.instance.load();
+  await NotificationService.init();
   runApp(const PHSTowerApp());
 }
 
@@ -25,6 +29,7 @@ class PHSTowerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PHS Tower',
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF072636)),
         useMaterial3: true,
@@ -108,8 +113,7 @@ class _MainScreenState extends State<MainScreen>
   final _newsKey   = GlobalKey<NewsScreenState>();
   final _searchKey = GlobalKey<SearchScreenState>();
 
-  // Auth — restricted to the school's Google Workspace domain.
-  static const _allowedDomain = 'princetonk12.org';
+  // Auth — any Google account is allowed to sign in.
 
   // ⚠️ FILL ME IN: the **Web** OAuth client ID from Google Cloud Console
   // (APIs & Services → Credentials → OAuth client of type "Web application").
@@ -120,21 +124,11 @@ class _MainScreenState extends State<MainScreen>
 
   final _googleSignIn = GoogleSignIn(
     scopes: const ['email'],
-    // Hints the Google account picker to only offer @princetonk12.org accounts.
-    hostedDomain: _allowedDomain,
     // Makes the returned idToken audience = the Web client → lets Supabase
     // verify it via signInWithIdToken.
     serverClientId: _webClientId,
   );
   GoogleSignInAccount? _user;
-
-  /// Exact-match domain check (defence in depth — `hostedDomain` only filters
-  /// the picker; we never trust an account whose email isn't on the domain).
-  bool _isAllowedDomain(String email) {
-    final at = email.lastIndexOf('@');
-    if (at < 0) return false;
-    return email.substring(at + 1).toLowerCase() == _allowedDomain;
-  }
 
   @override
   void initState() {
@@ -149,8 +143,7 @@ class _MainScreenState extends State<MainScreen>
       curve: Curves.easeInOut,
       reverseCurve: Curves.easeInOut,
     );
-    // Restore previous session silently — re-establishing the Supabase session
-    // and re-checking the domain.
+    // Restore previous session silently — re-establishing the Supabase session.
     _googleSignIn.signInSilently().then((u) async {
       if (u == null) return;
       final ok = await _authorize(u);
@@ -169,12 +162,10 @@ class _MainScreenState extends State<MainScreen>
     super.dispose();
   }
 
-  /// Validates the domain and establishes a Supabase session from the Google
-  /// idToken. Returns true on success. On any failure the account is signed out
-  /// so we never hold a half-authenticated state.
+  /// Establishes a Supabase session from the Google idToken. Returns true on
+  /// success. On any failure the account is signed out so we never hold a
+  /// half-authenticated state.
   Future<bool> _authorize(GoogleSignInAccount account) async {
-    if (!_isAllowedDomain(account.email)) return false;
-
     final auth = await account.authentication;
     final idToken = auth.idToken;
     if (idToken == null) {
@@ -197,14 +188,14 @@ class _MainScreenState extends State<MainScreen>
 
       final ok = await _authorize(account);
       if (!ok) {
-        // Off-domain (or token problem) — reject and clear everything.
+        // Token problem — reject and clear everything.
         await _googleSignIn.signOut();
         await Supabase.instance.client.auth.signOut();
         if (mounted) {
           setState(() => _user = null);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Please sign in with your @$_allowedDomain account.'),
+              content: Text('Sign-in failed. Please try again.'),
             ),
           );
         }

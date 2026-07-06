@@ -1,9 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../debug/typography.dart';
+import '../services/bookmarks.dart';
 
 /// Byline for a raw article map, falling back to the masthead when no authors
 /// are credited.
@@ -83,6 +86,16 @@ class _ArticleScreenState extends State<ArticleScreen> {
   static const _ink = Color(0xFF000000); // body & headline text — black
   static const _link = Color(0xFF1A4E8A);
 
+  void _share() {
+    final a = _article;
+    if (a == null) return;
+    final title = a['title'] as String? ?? '';
+    final byline = _authorLine(a['authors'] as List?);
+    final url = 'https://www.towerphs.com/articles/'
+        '${a['year']}/${a['month']}/${a['category']}/${a['id']}';
+    Share.share('"$title" by $byline — The Tower\n$url');
+  }
+
   /// Renders the article body as Markdown. The DB stores single `\n` as soft
   /// word-wrap hints and blank lines as paragraph breaks — both of which map
   /// cleanly onto standard Markdown (soft breaks collapse to spaces, blank
@@ -146,6 +159,31 @@ class _ArticleScreenState extends State<ArticleScreen> {
         scrolledUnderElevation: 0,
         leading: const BackButton(),
         title: Text('Article', style: headline(context, size: 20, color: Colors.black)),
+        actions: [
+          if (_article != null) ...[
+            AnimatedBuilder(
+              animation: BookmarksService.instance,
+              builder: (context, _) {
+                final saved = BookmarksService.instance
+                    .isSaved(_article!['id'] as int);
+                return IconButton(
+                  icon: Icon(
+                    saved ? Icons.bookmark : Icons.bookmark_border,
+                    color: const Color(0xFF072636),
+                  ),
+                  tooltip: saved ? 'Remove from saved' : 'Save article',
+                  onPressed: () =>
+                      BookmarksService.instance.toggle(_article!),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.share_outlined, color: Colors.black),
+              tooltip: 'Share',
+              onPressed: _share,
+            ),
+          ],
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -157,10 +195,12 @@ class _ArticleScreenState extends State<ArticleScreen> {
                     children: [
                       // Hero image — hidden if missing or broken
                       if ((_article!['img'] as String?)?.trim().isNotEmpty == true)
-                        Image.network(
-                          _article!['img'],
+                        CachedNetworkImage(
+                          imageUrl: _article!['img'],
                           width: double.infinity, height: 220, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          placeholder: (_, __) => Container(
+                              height: 220, color: const Color(0xFFF0F0F0)),
+                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
                         ),
 
                       // Article body
@@ -301,11 +341,15 @@ class _RelatedArticleTile extends StatelessWidget {
                   const SizedBox(width: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      img,
+                    child: CachedNetworkImage(
+                      imageUrl: img,
                       width: 72, height: 72,
+                      memCacheWidth: 216,
+                      memCacheHeight: 216,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      placeholder: (_, __) =>
+                          Container(color: const Color(0xFFF0F0F0)),
+                      errorWidget: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
                 ],

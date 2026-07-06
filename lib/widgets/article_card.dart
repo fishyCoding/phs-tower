@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/article.dart';
 import '../screens/article_screen.dart';
@@ -162,10 +163,11 @@ class HeroArticleCard extends StatelessWidget {
                   AspectRatio(
                     aspectRatio: 16 / 9,
                     child: article.img.isNotEmpty
-                        ? Image.network(
-                            article.img,
+                        ? CachedNetworkImage(
+                            imageUrl: article.img,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _placeholder(null),
+                            placeholder: (_, __) => _placeholder(null),
+                            errorWidget: (_, __, ___) => _placeholder(null),
                           )
                         : _placeholder(null),
                   ),

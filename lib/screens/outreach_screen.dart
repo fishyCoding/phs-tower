@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../widgets/google_form_webview.dart';
+import 'about_screens.dart';
 import 'letter_to_editor_screen.dart';
 import '../debug/typography.dart';
 
@@ -101,15 +103,17 @@ class OutreachScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // Testing-only shortcut — bypasses Google/Supabase auth entirely.
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: onDevBypass,
-              child: const Text(
-                'Skip sign-in (testing)',
-                style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+            // Testing-only shortcut — debug builds only, never shipped.
+            if (kDebugMode) ...[
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: onDevBypass,
+                child: const Text(
+                  'Skip sign-in (testing)',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF999999)),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -178,6 +182,24 @@ class OutreachScreen extends StatelessWidget {
             'Join the Tower',
             const GoogleFormWebView(formUrl: _joinFormUrl),
           ),
+        ),
+        const SizedBox(height: 16),
+        _OutreachCard(
+          icon: Icons.info_outline,
+          label: 'ABOUT',
+          title: 'About The Tower',
+          description: 'Who we are and what we publish.',
+          action: 'Learn More',
+          onTap: () => _push(context, 'About The Tower', const AboutBody()),
+        ),
+        const SizedBox(height: 16),
+        _OutreachCard(
+          icon: Icons.people_alt_outlined,
+          label: 'STAFF',
+          title: 'Our Staff',
+          description: 'Meet this year\'s Tower staff.',
+          action: 'View Staff',
+          onTap: () => _push(context, 'Our Staff', const StaffBody()),
         ),
       ],
     );
