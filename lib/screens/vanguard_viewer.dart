@@ -1,31 +1,30 @@
 import 'dart:async';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/vanguard.dart';
 import '../vanguard/camera.dart';
+import '../vanguard/pdf_pages.dart';
 
-/// Fullscreen guided pan-and-zoom reader for a Vanguard issue.
+/// Fullscreen reader for a Vanguard spread (a 2-page print PDF).
 ///
-/// The camera visits each authored stop in order (page 1's stops, then
-/// page 2's, …) and finishes on a full-page overview. One gesture = one step:
-/// swipe up / tap / scroll down / arrow keys advance, swipe down / scroll up
-/// goes back. At the overview the reader can enter free pinch-zoom explore.
+/// If the spread has an authored camera path, the camera visits each stop in
+/// reading order (one gesture = one step, animated pan+zoom) then zooms out to
+/// an overview with free explore. Otherwise the reader gets plain pinch-zoom
+/// over the rendered pages.
 class VanguardViewerScreen extends StatefulWidget {
-  final VanguardIssue issue;
-  const VanguardViewerScreen({super.key, required this.issue});
+  final Spread spread;
+  const VanguardViewerScreen({super.key, required this.spread});
 
   @override
   State<VanguardViewerScreen> createState() => _VanguardViewerScreenState();
 }
 
-/// One entry in the flattened stop sequence.
 class _Entry {
   final int page;
-  final Rect rect; // normalized region of the page image
+  final Rect rect; // normalized region of the page
   final bool overview;
   const _Entry(this.page, this.rect, {this.overview = false});
 }
@@ -37,43 +36,34 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   late final CurvedAnimation _curved =
       CurvedAnimation(parent: _anim, curve: Curves.easeInOutCubic);
 
-  late final List<_Entry> _entries;
+  List<RenderedPage>? _pages;
+  String? _error;
+  List<_Entry> _entries = const [];
 
   int _index = 0;
-  int? _target; // entry being animated toward
-  VanguardCamera? _fromOverride; // set when gliding back out of free explore
+  int? _target;
+  VanguardCamera? _fromOverride;
   bool _freeMode = false;
-  bool _ready = false;
-  bool _precacheStarted = false;
-  final Set<int> _precachedPages = {};
 
   Size _viewport = Size.zero;
   final _freeController = TransformationController();
+  bool _freeInit = false;
 
   double _dragAccum = 0;
   double _wheelAccum = 0;
   DateTime _lastWheel = DateTime.fromMillisecondsSinceEpoch(0);
 
-  // First-open hint, suppressed for the rest of the session once seen.
   static bool _hintSeen = false;
   bool _hintVisible = !_hintSeen;
   Timer? _hintTimer;
 
-  List<VanguardPage> get _pages => widget.issue.pages;
-  int get _stopCount => _entries.length - 1; // excludes the overview entry
+  bool get _guided => _entries.isNotEmpty;
+  int get _stopCount => _entries.isEmpty ? 0 : _entries.length - 1;
 
   @override
   void initState() {
     super.initState();
-    _entries = [
-      for (var p = 0; p < _pages.length; p++)
-        for (final s in _pages[p].stops)
-          _Entry(p, Rect.fromLTWH(s.x, s.y, s.w, s.h)),
-      if (_pages.isNotEmpty)
-        _Entry(_pages.length - 1, const Rect.fromLTWH(0, 0, 1, 1),
-            overview: true),
-    ];
-
+    _load();
     _anim.addStatusListener((status) {
       if (status == AnimationStatus.completed && _target != null) {
         setState(() {
@@ -81,29 +71,49 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
           _target = null;
           _fromOverride = null;
         });
-        _precacheUpcomingPage();
       }
     });
-
     _hintTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() => _hintVisible = false);
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_precacheStarted && _pages.isNotEmpty) {
-      _precacheStarted = true;
-      precacheImage(
-        CachedNetworkImageProvider(_pages.first.image),
-        context,
-        onError: (_, __) {},
-      ).then((_) {
-        if (mounted) setState(() => _ready = true);
-      });
-      _precachedPages.add(0);
+  Future<void> _load() async {
+    if (!widget.spread.hasValidSrc) {
+      setState(() => _error = 'This spread has no valid PDF.');
+      return;
     }
+    try {
+      final pages = await renderSpreadPages(widget.spread.pdfUrl);
+      if (!mounted) return;
+      if (pages.isEmpty) {
+        setState(() => _error = 'Could not render this PDF.');
+        return;
+      }
+      setState(() {
+        _pages = pages;
+        _entries = _buildEntries(pages);
+      });
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not load this PDF.');
+    }
+  }
+
+  /// Flatten the authored path into a stop sequence + a final overview entry.
+  /// Returns empty (→ free mode) when the spread has no path.
+  List<_Entry> _buildEntries(List<RenderedPage> pages) {
+    final path = widget.spread.cameraPath;
+    if (path == null || !widget.spread.hasGuidedPath) return const [];
+    final entries = <_Entry>[];
+    for (var p = 0; p < path.length && p < pages.length; p++) {
+      for (final s in path[p]) {
+        entries.add(_Entry(p, Rect.fromLTWH(s.x, s.y, s.w, s.h)));
+      }
+    }
+    if (entries.isEmpty) return const [];
+    entries.add(_Entry(pages.length - 1, const Rect.fromLTWH(0, 0, 1, 1),
+        overview: true));
+    return entries;
   }
 
   @override
@@ -115,32 +125,17 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     super.dispose();
   }
 
-  // ── camera helpers ──────────────────────────────────────────────────────────
+  Size _pageSize(int i) => Size(_pages![i].width, _pages![i].height);
 
   VanguardCamera _cameraOf(int i) {
     final e = _entries[i];
-    final page = _pages[e.page];
-    return cameraForRect(_viewport, Size(page.width, page.height), e.rect);
+    return cameraForRect(_viewport, _pageSize(e.page), e.rect);
   }
 
-  /// Decode the next page's image while the reader dwells on the last stop of
-  /// the current page, so the crossfade lands on ready pixels.
-  void _precacheUpcomingPage() {
-    if (_index + 1 >= _entries.length) return;
-    final nextPage = _entries[_index + 1].page;
-    if (nextPage != _entries[_index].page && _precachedPages.add(nextPage)) {
-      precacheImage(
-        CachedNetworkImageProvider(_pages[nextPage].image),
-        context,
-        onError: (_, __) {},
-      );
-    }
-  }
-
-  // ── stepping ────────────────────────────────────────────────────────────────
+  // ── stepping (guided) ─────────────────────────────────────────────────────
 
   void _step(int dir) {
-    if (!_ready || _freeMode || _anim.isAnimating || _viewport == Size.zero) {
+    if (!_guided || _freeMode || _anim.isAnimating || _viewport == Size.zero) {
       return;
     }
     final next = _index + dir;
@@ -171,7 +166,6 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   }
 
   void _exitFreeMode() {
-    // Glide from wherever the reader wandered back to the overview framing.
     final cam = VanguardCamera.fromMatrix(_freeController.value, _viewport);
     setState(() {
       _freeMode = false;
@@ -182,14 +176,14 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     _anim.forward(from: 0);
   }
 
-  // ── input ───────────────────────────────────────────────────────────────────
+  // ── input ─────────────────────────────────────────────────────────────────
 
   void _onDragEnd(DragEndDetails d) {
     final v = d.primaryVelocity ?? 0;
     if (v < -250 || _dragAccum < -60) {
-      _step(1); // swipe up → next
+      _step(1);
     } else if (v > 250 || _dragAccum > 60) {
-      _step(-1); // swipe down → previous
+      _step(-1);
     }
     _dragAccum = 0;
   }
@@ -208,21 +202,10 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     }
   }
 
-  // ── build ───────────────────────────────────────────────────────────────────
+  // ── build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    if (_pages.isEmpty || _entries.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
-        body: const Center(
-          child: Text('This issue has no pages yet.',
-              style: TextStyle(color: Colors.white70)),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: CallbackShortcuts(
@@ -241,23 +224,19 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
             builder: (context, constraints) {
               _viewport = Size(constraints.maxWidth, constraints.maxHeight);
               return Listener(
-                onPointerSignal: _freeMode ? null : _onPointerSignal,
+                onPointerSignal:
+                    (_guided && !_freeMode) ? _onPointerSignal : null,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: _freeMode ? null : () => _step(1),
-                  onVerticalDragUpdate:
-                      _freeMode ? null : (d) => _dragAccum += d.delta.dy,
-                  onVerticalDragEnd: _freeMode ? null : _onDragEnd,
+                  onTap: (_guided && !_freeMode) ? () => _step(1) : null,
+                  onVerticalDragUpdate: (_guided && !_freeMode)
+                      ? (d) => _dragAccum += d.delta.dy
+                      : null,
+                  onVerticalDragEnd:
+                      (_guided && !_freeMode) ? _onDragEnd : null,
                   child: Stack(
                     children: [
-                      if (!_ready)
-                        const Center(
-                            child: CircularProgressIndicator(
-                                color: Colors.white54))
-                      else if (_freeMode)
-                        _buildFreeExplore()
-                      else
-                        _buildGuided(),
+                      _buildContent(),
                       _buildOverlay(),
                     ],
                   ),
@@ -270,7 +249,32 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     );
   }
 
-  /// Guided mode: page layers driven by the animation controller.
+  Widget _buildContent() {
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(_error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70)),
+        ),
+      );
+    }
+    if (_pages == null) {
+      return const Center(child: CircularProgressIndicator(color: Colors.white54));
+    }
+    if (!_guided || _freeMode) return _buildFree();
+    return _buildGuided();
+  }
+
+  Widget _pageImage(int i) => SizedBox(
+        width: _pages![i].width,
+        height: _pages![i].height,
+        child: Image.memory(_pages![i].bytes,
+            fit: BoxFit.fill, gaplessPlayback: true),
+      );
+
+  // Guided mode: page layers driven by the animation controller.
   Widget _buildGuided() {
     return AnimatedBuilder(
       animation: _anim,
@@ -283,11 +287,9 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
           final camFrom = _fromOverride ?? _cameraOf(_index);
           final camTo = _cameraOf(_target!);
           if (fromE.page == toE.page) {
-            final cam = VanguardCamera.lerp(camFrom, camTo, t);
-            layers.add(_pageLayer(fromE.page, cam, 1));
+            layers.add(_pageLayer(
+                fromE.page, VanguardCamera.lerp(camFrom, camTo, t), 1));
           } else {
-            // Crossfade: outgoing holds its framing, incoming arrives already
-            // framed at its target stop.
             layers.add(_pageLayer(fromE.page, camFrom, 1 - t));
             layers.add(_pageLayer(toE.page, camTo, t));
           }
@@ -300,7 +302,6 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   }
 
   Widget _pageLayer(int pageIndex, VanguardCamera cam, double opacity) {
-    final page = _pages[pageIndex];
     return Positioned.fill(
       child: ClipRect(
         child: OverflowBox(
@@ -313,7 +314,7 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
             opacity: opacity.clamp(0.0, 1.0),
             child: Transform(
               transform: cam.toMatrix(_viewport),
-              child: _pageImage(page),
+              child: _pageImage(pageIndex),
             ),
           ),
         ),
@@ -321,52 +322,47 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     );
   }
 
-  Widget _pageImage(VanguardPage page) => SizedBox(
-        width: page.width,
-        height: page.height,
-        child: CachedNetworkImage(
-          imageUrl: page.image,
-          fit: BoxFit.fill,
-          fadeInDuration: Duration.zero,
-          placeholder: (_, __) => Container(color: const Color(0xFF1A1A1A)),
-          errorWidget: (_, __, ___) => Container(
-            color: const Color(0xFF1A1A1A),
-            child: const Center(
-              child: Icon(Icons.broken_image_outlined,
-                  color: Colors.white24, size: 64),
-            ),
-          ),
-        ),
-      );
-
-  /// Free explore at the overview: same page, same coordinate convention, so
-  /// the handoff from the guided Transform is seamless.
-  Widget _buildFreeExplore() {
-    final page = _pages[_entries[_index].page];
-    return Positioned.fill(
-      child: ClipRect(
-        child: InteractiveViewer(
-          transformationController: _freeController,
-          constrained: false,
-          boundaryMargin: const EdgeInsets.all(double.infinity),
-          minScale: 0.01,
-          maxScale: 4.0,
-          child: _pageImage(page),
+  /// Free pinch-zoom over the whole spread (fallback, and the guided overview's
+  /// explore mode). Pages are stacked vertically as one pannable canvas.
+  Widget _buildFree() {
+    final contentWidth =
+        _pages!.map((p) => p.width).reduce((a, b) => a > b ? a : b);
+    if (!_freeInit && _viewport != Size.zero) {
+      _freeInit = true;
+      final scale = _viewport.width / contentWidth;
+      _freeController.value = Matrix4.identity()..scaleByDouble(scale, scale, scale, 1);
+    }
+    return ClipRect(
+      child: InteractiveViewer(
+        transformationController: _freeController,
+        constrained: false,
+        boundaryMargin: const EdgeInsets.all(double.infinity),
+        minScale: 0.05,
+        maxScale: 6.0,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < _pages!.length; i++) _pageImage(i),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildOverlay() {
-    final logical = _target ?? _index;
-    final atOverview = _entries[logical].overview;
-    final String counter;
-    if (_freeMode) {
+    final String? counter;
+    if (_pages == null || _error != null) {
+      counter = null;
+    } else if (!_guided) {
+      counter = null; // free-only spread: no step counter
+    } else if (_freeMode) {
       counter = 'Explore';
-    } else if (atOverview) {
-      counter = 'Overview';
     } else {
-      counter = '${logical + 1} / $_stopCount';
+      final logical = _target ?? _index;
+      counter = _entries[logical].overview
+          ? 'Overview'
+          : '${logical + 1} / $_stopCount';
     }
 
     return SafeArea(
@@ -380,52 +376,49 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
               onTap: () => Navigator.of(context).maybePop(),
             ),
           ),
-          Positioned(
-            right: 12,
-            top: 14,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                counter,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+          if (counter != null)
+            Positioned(
+              right: 12,
+              top: 14,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: Text(counter,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
               ),
             ),
-          ),
-          // Bottom-center affordance: first-open hint, explore invitation at
-          // the overview, or the way back out of free explore.
           Positioned(
             left: 0,
             right: 0,
             bottom: 24,
-            child: Center(child: _bottomPill(atOverview)),
+            child: Center(child: _bottomPill()),
           ),
         ],
       ),
     );
   }
 
-  Widget _bottomPill(bool atOverview) {
+  Widget _bottomPill() {
+    if (!_guided || _pages == null || _error != null) {
+      return const SizedBox.shrink();
+    }
+    final atOverview = _entries[_target ?? _index].overview;
     if (_freeMode) {
       return _PillButton(
-        icon: Icons.undo,
-        label: 'Back to overview',
-        onTap: _exitFreeMode,
-      );
+          icon: Icons.undo, label: 'Back to overview', onTap: _exitFreeMode);
     }
     if (atOverview && !_anim.isAnimating) {
       return _PillButton(
-        icon: Icons.pinch_outlined,
-        label: 'Pinch & explore',
-        onTap: _enterFreeMode,
-      );
+          icon: Icons.pinch_outlined,
+          label: 'Pinch & explore',
+          onTap: _enterFreeMode);
     }
     if (_hintVisible && _index == 0 && _target == null) {
       return AnimatedOpacity(
@@ -434,9 +427,7 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-          ),
+              color: Colors.black54, borderRadius: BorderRadius.circular(20)),
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [

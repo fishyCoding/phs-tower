@@ -87,44 +87,59 @@ void main() {
     });
   });
 
-  group('VanguardIssue.fromMap', () {
-    test('parses a full row', () {
-      final issue = VanguardIssue.fromMap({
-        'id': 3,
-        'title': 'Generation Gap',
+  group('Spread.fromMap', () {
+    test('parses a full row with an authored camera path', () {
+      final spread = Spread.fromMap({
+        'id': 51,
+        'title': 'Vanguard Presents: Generation Gap ',
         'month': 4,
         'year': 2026,
-        'pages': [
-          {
-            'image': 'https://example.com/p1.png',
-            'width': 1980,
-            'height': 3060,
-            'stops': [
-              {'x': 0.05, 'y': 0.03, 'w': 0.4, 'h': 0.25},
-              {'x': 0.5, 'y': 0.6, 'w': 0.45, 'h': 0.3},
-            ],
-          },
-          {
-            'image': 'https://example.com/p2.png',
-            'width': 3960,
-            'height': 3060,
-            'stops': [],
-          },
+        'src': 'https://example.com/gen-gap.pdf#pages=2',
+        'camera_path': [
+          [
+            {'x': 0.05, 'y': 0.03, 'w': 0.4, 'h': 0.25},
+            {'x': 0.5, 'y': 0.6, 'w': 0.45, 'h': 0.3},
+          ],
+          [],
         ],
       });
-      expect(issue.id, 3);
-      expect(issue.title, 'Generation Gap');
-      expect(issue.pages.length, 2);
-      expect(issue.pages[0].stops.length, 2);
-      expect(issue.pages[0].stops[1].x, closeTo(0.5, 0.0001));
-      expect(issue.pages[1].width, 3960);
-      expect(issue.pages[1].stops, isEmpty);
+      expect(spread.id, 51);
+      expect(spread.title, 'Vanguard Presents: Generation Gap'); // trimmed
+      expect(spread.pdfUrl, 'https://example.com/gen-gap.pdf'); // fragment gone
+      expect(spread.hasValidSrc, isTrue);
+      expect(spread.hasGuidedPath, isTrue);
+      expect(spread.cameraPath!.length, 2);
+      expect(spread.cameraPath![0].length, 2);
+      expect(spread.cameraPath![0][1].x, closeTo(0.5, 0.0001));
+      expect(spread.cameraPath![1], isEmpty);
     });
 
-    test('defaults missing fields safely and clamps stops', () {
-      final issue = VanguardIssue.fromMap({
+    test('null camera_path → no guided path', () {
+      final spread = Spread.fromMap({
         'id': 1,
-        'pages': [
+        'title': 'X',
+        'month': 2,
+        'year': 2025,
+        'src': 'https://example.com/x.pdf',
+      });
+      expect(spread.cameraPath, isNull);
+      expect(spread.hasGuidedPath, isFalse);
+    });
+
+    test('empty stops on every page → not a guided path', () {
+      final spread = Spread.fromMap({
+        'id': 1,
+        'src': 'https://example.com/x.pdf',
+        'camera_path': [[], []],
+      });
+      expect(spread.hasGuidedPath, isFalse);
+    });
+
+    test('accepts {"stops": [...]} page wrapper and clamps values', () {
+      final spread = Spread.fromMap({
+        'id': 1,
+        'src': 'https://example.com/x.pdf',
+        'camera_path': [
           {
             'stops': [
               {'x': -0.5, 'y': 2.0, 'w': 1.5},
@@ -132,25 +147,22 @@ void main() {
           },
         ],
       });
-      expect(issue.title, '');
-      expect(issue.pages.single.image, '');
-      final stop = issue.pages.single.stops.single;
+      final stop = spread.cameraPath!.single.single;
       expect(stop.x, 0.0); // clamped
       expect(stop.y, 1.0); // clamped
       expect(stop.w, 1.0); // clamped
       expect(stop.h, 0.0); // missing → 0
     });
 
-    test('round-trips through toMap', () {
-      const page = VanguardPage(
-        image: 'https://example.com/p.png',
-        width: 100,
-        height: 200,
-        stops: [VanguardStop(x: 0.1, y: 0.2, w: 0.3, h: 0.4)],
-      );
-      final back = VanguardPage.fromMap(page.toMap());
-      expect(back.image, page.image);
-      expect(back.stops.single.w, closeTo(0.3, 0.0001));
+    test('a title in the src column is treated as invalid', () {
+      final spread = Spread.fromMap({
+        'id': 6,
+        'title': '2021–2022 School Year Club Recap',
+        'src': '2021–2022 School Year Club Recap',
+        'month': 6,
+        'year': 2022,
+      });
+      expect(spread.hasValidSrc, isFalse);
     });
   });
 }
