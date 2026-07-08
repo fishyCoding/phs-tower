@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -24,9 +25,9 @@ class VanguardViewerScreen extends StatefulWidget {
 
 class _Entry {
   final int page;
-  final Rect rect; // normalized region of the page
+  final VanguardStop? stop; // null for the overview entry
   final bool overview;
-  const _Entry(this.page, this.rect, {this.overview = false});
+  const _Entry(this.page, {this.stop, this.overview = false});
 }
 
 class _VanguardViewerScreenState extends State<VanguardViewerScreen>
@@ -94,8 +95,12 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
         _pages = pages;
         _entries = _buildEntries(pages);
       });
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Could not load this PDF.');
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = kDebugMode
+            ? 'Could not load this PDF.\n\n$e'
+            : 'Could not load this PDF.');
+      }
     }
   }
 
@@ -107,12 +112,11 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     final entries = <_Entry>[];
     for (var p = 0; p < path.length && p < pages.length; p++) {
       for (final s in path[p]) {
-        entries.add(_Entry(p, Rect.fromLTWH(s.x, s.y, s.w, s.h)));
+        entries.add(_Entry(p, stop: s));
       }
     }
     if (entries.isEmpty) return const [];
-    entries.add(_Entry(pages.length - 1, const Rect.fromLTWH(0, 0, 1, 1),
-        overview: true));
+    entries.add(_Entry(pages.length - 1, overview: true));
     return entries;
   }
 
@@ -129,7 +133,10 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
 
   VanguardCamera _cameraOf(int i) {
     final e = _entries[i];
-    return cameraForRect(_viewport, _pageSize(e.page), e.rect);
+    if (e.overview || e.stop == null) {
+      return overviewCamera(_viewport, _pageSize(e.page));
+    }
+    return cameraForStop(_viewport, _pages![e.page].width, e.stop!);
   }
 
   // ── stepping (guided) ─────────────────────────────────────────────────────
@@ -252,11 +259,11 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   Widget _buildContent() {
     if (_error != null) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Text(_error!,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 80, 28, 28),
+          child: SelectableText(_error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70)),
+              style: const TextStyle(color: Colors.white70, fontSize: 13)),
         ),
       );
     }

@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pdfx/pdfx.dart';
 
@@ -23,8 +22,10 @@ Future<List<RenderedPage>> renderSpreadPages(
   final file = await DefaultCacheManager().getSingleFile(pdfUrl);
   final doc = await PdfDocument.openFile(file.path);
   final pages = <RenderedPage>[];
+  final int count = doc.pagesCount;
+  Object? lastRenderError;
   try {
-    for (var i = 1; i <= doc.pagesCount; i++) {
+    for (var i = 1; i <= count; i++) {
       final page = await doc.getPage(i);
       try {
         final pw = page.width, ph = page.height;
@@ -41,15 +42,21 @@ Future<List<RenderedPage>> renderSpreadPages(
           width: w,
           height: h,
           format: PdfPageImageFormat.png,
-          backgroundColor: '#FFFFFF',
         );
         if (img != null) pages.add(RenderedPage(img.bytes, w, h));
+      } catch (e) {
+        lastRenderError = e;
+        debugPrint('Vanguard: page $i render failed: $e');
       } finally {
         await page.close();
       }
     }
   } finally {
     await doc.close();
+  }
+  if (pages.isEmpty) {
+    throw StateError(
+        'Rendered 0 of $count page(s)${lastRenderError != null ? ' — $lastRenderError' : ''}');
   }
   return pages;
 }

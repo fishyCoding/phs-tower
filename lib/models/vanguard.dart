@@ -1,22 +1,32 @@
-/// A single camera stop: a normalized (0–1) rectangle of a rendered page, in
-/// reading order.
+/// A single camera stop, in reading order. An oriented region of a rendered
+/// page: center (cx,cy) and half-extents (hw,hh), all normalized by the image
+/// *width* so both axes share one unit and rotation stays true, plus [rot] —
+/// the rotation in radians the reader's camera applies to bring the region
+/// upright.
 class VanguardStop {
-  final double x, y, w, h;
+  final double cx, cy, hw, hh, rot;
 
   const VanguardStop({
-    required this.x,
-    required this.y,
-    required this.w,
-    required this.h,
+    required this.cx,
+    required this.cy,
+    required this.hw,
+    required this.hh,
+    this.rot = 0,
   });
 
   factory VanguardStop.fromMap(Map<String, dynamic> map) {
-    double f(String key) =>
-        ((map[key] as num?)?.toDouble() ?? 0).clamp(0.0, 1.0);
-    return VanguardStop(x: f('x'), y: f('y'), w: f('w'), h: f('h'));
+    double f(String key) => (map[key] as num?)?.toDouble() ?? 0;
+    return VanguardStop(
+      cx: f('cx'),
+      cy: f('cy'),
+      hw: f('hw'),
+      hh: f('hh'),
+      rot: f('rot'),
+    );
   }
 
-  Map<String, dynamic> toMap() => {'x': x, 'y': y, 'w': w, 'h': h};
+  Map<String, dynamic> toMap() =>
+      {'cx': cx, 'cy': cy, 'hw': hw, 'hh': hh, 'rot': rot};
 }
 
 /// A Vanguard spread: a print-page PDF (usually two pages) stored in the

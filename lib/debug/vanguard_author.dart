@@ -1,17 +1,19 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/vanguard.dart';
 import '../vanguard/camera.dart';
 import '../vanguard/pdf_pages.dart';
 
 /// Debug-only tool for authoring a spread's guided-camera path.
 ///
-/// Opens the spread's PDF, renders its pages, and lets you frame each paragraph
-/// by pan/pinch and capture it as a stop (in reading order). Export copies the
-/// `camera_path` JSON to the clipboard to paste into that row's `camera_path`
-/// column in the `spreads` table.
+/// Opens the spread's PDF, renders its pages, and lets you frame each region by
+/// pan / pinch-zoom / two-finger-rotate (or the 90° buttons) and capture it as
+/// a stop in reading order. Export copies the `camera_path` JSON to paste into
+/// that row's `camera_path` column in the `spreads` table.
 class VanguardAuthorScreen extends StatefulWidget {
   final String src;
   final String title;
@@ -26,10 +28,13 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
   List<RenderedPage>? _pages;
   String? _error;
   int _current = 0;
-  late final List<List<Rect>> _stops = [];
+  final List<List<VanguardStop>> _stops = [];
 
-  final _controller = TransformationController();
+  Matrix4 _matrix = Matrix4.identity();
+  Matrix4 _startMatrix = Matrix4.identity();
+  Offset _startFocal = Offset.zero;
   Size _viewport = Size.zero;
+  bool _fitted = false;
 
   static const _blue = Color(0xFF072636);
 
@@ -50,52 +55,80 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
       setState(() {
         _pages = pages;
         _stops.clear();
-        _stops.addAll(List.generate(pages.length, (_) => <Rect>[]));
+        _stops.addAll(List.generate(pages.length, (_) => <VanguardStop>[]));
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fitPage());
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Could not load this PDF.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not load this PDF.\n\n$e');
     }
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Size get _pageSize =>
-      Size(_pages![_current].width, _pages![_current].height);
+  Size get _pageSize => Size(_pages![_current].width, _pages![_current].height);
 
   void _fitPage() {
     if (_pages == null || _viewport == Size.zero) return;
-    _controller.value = overviewCamera(_viewport, _pageSize).toMatrix(_viewport);
+    setState(() =>
+        _matrix = overviewCamera(_viewport, _pageSize).toMatrix(_viewport));
   }
 
   void _selectPage(int i) {
-    setState(() => _current = i);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fitPage());
+    setState(() {
+      _current = i;
+      _fitted = false;
+    });
+  }
+
+  void _onScaleStart(ScaleStartDetails d) {
+    _startMatrix = _matrix.clone();
+    _startFocal = d.localFocalPoint;
+  }
+
+  void _onScaleUpdate(ScaleUpdateDetails d) {
+    final f = d.localFocalPoint;
+    final g = Matrix4.identity()
+      ..translateByDouble(f.dx, f.dy, 0, 1)
+      ..rotateZ(d.rotation)
+      ..scaleByDouble(d.scale, d.scale, 1, 1)
+      ..translateByDouble(-_startFocal.dx, -_startFocal.dy, 0, 1);
+    setState(() => _matrix = g.multiplied(_startMatrix));
+  }
+
+  void _rotate90(int dir) {
+    if (_viewport == Size.zero) return;
+    final vc = Offset(_viewport.width / 2, _viewport.height / 2);
+    final g = Matrix4.identity()
+      ..translateByDouble(vc.dx, vc.dy, 0, 1)
+      ..rotateZ(dir * math.pi / 2)
+      ..translateByDouble(-vc.dx, -vc.dy, 0, 1);
+    setState(() => _matrix = g.multiplied(_matrix));
   }
 
   void _addStop() {
     if (_pages == null || _viewport == Size.zero) return;
     setState(() => _stops[_current]
-        .add(captureNormalized(_controller.value, _viewport, _pageSize)));
+        .add(captureStop(_matrix, _viewport, _pageSize.width)));
   }
 
-  void _previewStop(Rect r) {
-    _controller.value = cameraForRect(_viewport, _pageSize, r).toMatrix(_viewport);
+  void _previewStop(VanguardStop s) {
+    setState(() =>
+        _matrix = cameraForStop(_viewport, _pageSize.width, s).toMatrix(_viewport));
   }
 
   double _r(double v) => (v * 10000).round() / 10000;
+  int _deg(double rad) => (rad * 180 / math.pi).round();
 
   void _export() {
     if (_pages == null) return;
     final data = [
       for (final page in _stops)
         [
-          for (final r in page)
-            {'x': _r(r.left), 'y': _r(r.top), 'w': _r(r.width), 'h': _r(r.height)}
+          for (final s in page)
+            {
+              'cx': _r(s.cx),
+              'cy': _r(s.cy),
+              'hw': _r(s.hw),
+              'hh': _r(s.hh),
+              'rot': _r(s.rot),
+            }
         ]
     ];
     Clipboard.setData(ClipboardData(
@@ -180,22 +213,47 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               _viewport = Size(constraints.maxWidth, constraints.maxHeight);
+              if (!_fitted && _viewport != Size.zero) {
+                _fitted = true;
+                _matrix =
+                    overviewCamera(_viewport, _pageSize).toMatrix(_viewport);
+              }
               return Container(
                 color: Colors.black,
-                child: ClipRect(
-                  child: InteractiveViewer(
-                    transformationController: _controller,
-                    constrained: false,
-                    boundaryMargin: const EdgeInsets.all(double.infinity),
-                    minScale: 0.02,
-                    maxScale: 10,
-                    child: SizedBox(
-                      width: _pageSize.width,
-                      height: _pageSize.height,
-                      child: Image.memory(_pages![_current].bytes,
-                          fit: BoxFit.fill, gaplessPlayback: true),
+                child: Stack(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      child: ClipRect(
+                        child: Transform(
+                          transform: _matrix,
+                          child: SizedBox(
+                            width: _pageSize.width,
+                            height: _pageSize.height,
+                            child: Image.memory(_pages![_current].bytes,
+                                fit: BoxFit.fill, gaplessPlayback: true),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      right: 12,
+                      bottom: 12,
+                      child: Column(
+                        children: [
+                          _RoundBtn(
+                              icon: Icons.rotate_left,
+                              onTap: () => _rotate90(-1)),
+                          const SizedBox(height: 10),
+                          _RoundBtn(
+                              icon: Icons.rotate_right,
+                              onTap: () => _rotate90(1)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -233,14 +291,14 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
                         itemCount: _stops[_current].length,
                         onReorderItem: (oldIndex, newIndex) {
                           setState(() {
-                            final r = _stops[_current].removeAt(oldIndex);
-                            _stops[_current].insert(newIndex, r);
+                            final s = _stops[_current].removeAt(oldIndex);
+                            _stops[_current].insert(newIndex, s);
                           });
                         },
                         itemBuilder: (context, i) {
-                          final r = _stops[_current][i];
+                          final s = _stops[_current][i];
                           return ListTile(
-                            key: ValueKey('s-$_current-$i-${r.hashCode}'),
+                            key: ValueKey('s-$_current-$i-${s.hashCode}'),
                             dense: true,
                             leading: CircleAvatar(
                               radius: 12,
@@ -250,11 +308,11 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
                                       fontSize: 11, color: Colors.white)),
                             ),
                             title: Text(
-                              'x ${_r(r.left)}  y ${_r(r.top)}  '
-                              'w ${_r(r.width)}  h ${_r(r.height)}',
+                              'c ${_r(s.cx)},${_r(s.cy)}  '
+                              'h ${_r(s.hw)}×${_r(s.hh)}  ${_deg(s.rot)}°',
                               style: const TextStyle(fontSize: 12),
                             ),
-                            onTap: () => _previewStop(r),
+                            onTap: () => _previewStop(s),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline,
                                   size: 18, color: Color(0xFFA31621)),
@@ -269,6 +327,26 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _RoundBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _RoundBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: const BoxDecoration(
+            color: Colors.black54, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
     );
   }
 }
