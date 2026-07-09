@@ -8,6 +8,10 @@ import 'package:flutter/services.dart';
 import '../models/vanguard.dart';
 import '../vanguard/camera.dart';
 import '../vanguard/pdf_pages.dart';
+import '../widgets/shimmer.dart';
+
+/// Light letterbox background for the reader (matches the app's light theme).
+const Color _kReaderBg = Color(0xFFEAEAEA);
 
 /// Fullscreen reader for a Vanguard spread (a 2-page print PDF).
 ///
@@ -214,7 +218,7 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: _kReaderBg,
       body: CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.arrowDown): () => _step(1),
@@ -263,13 +267,11 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
           padding: const EdgeInsets.fromLTRB(28, 80, 28, 28),
           child: SelectableText(_error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              style: const TextStyle(color: Color(0xFF666666), fontSize: 13)),
         ),
       );
     }
-    if (_pages == null) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white54));
-    }
+    if (_pages == null) return const _VanguardLoading();
     if (!_guided || _freeMode) return _buildFree();
     return _buildGuided();
   }
@@ -501,6 +503,42 @@ class _PillButton extends StatelessWidget {
                     fontWeight: FontWeight.w600)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Animated page-shaped shimmer shown while a spread's PDF renders.
+class _VanguardLoading extends StatelessWidget {
+  const _VanguardLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: LayoutBuilder(
+        builder: (context, c) {
+          // A portrait page silhouette, sized to the viewport.
+          final w = (c.maxWidth * 0.6).clamp(120.0, 520.0);
+          final h = (c.maxHeight * 0.7).clamp(160.0, 900.0);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Shimmer(
+                child: Container(
+                  width: w,
+                  height: h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('Loading spread…',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
+            ],
+          );
+        },
       ),
     );
   }

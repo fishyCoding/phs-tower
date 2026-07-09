@@ -1,17 +1,28 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../debug/typography.dart';
 import '../debug/vanguard_author.dart';
 import '../models/vanguard.dart';
+import '../widgets/tower_masthead.dart';
 import 'vanguard_viewer.dart';
 
 /// Vanguard section: list of visual spreads from the `spreads` table, newest
 /// first. Lives inside the News tab's IndexedStack (like SearchScreen), so it
 /// fetches once on creation and offers pull-to-refresh.
 class VanguardListScreen extends StatefulWidget {
-  const VanguardListScreen({super.key});
+  final GoogleSignInAccount? user;
+  final VoidCallback? onSignIn;
+  final VoidCallback? onSignOut;
+
+  const VanguardListScreen({
+    super.key,
+    this.user,
+    this.onSignIn,
+    this.onSignOut,
+  });
 
   @override
   State<VanguardListScreen> createState() => _VanguardListScreenState();
@@ -90,22 +101,14 @@ class _VanguardListScreenState extends State<VanguardListScreen> {
       child: SafeArea(
         bottom: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Vanguard',
-                      style: headline(context, size: 28, color: Colors.black)),
-                  const SizedBox(height: 3),
-                  const Text('Visual stories from The Tower',
-                      style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
-                ],
-              ),
+            TowerMasthead(
+              user: widget.user,
+              onSignIn: widget.onSignIn,
+              onSignOut: widget.onSignOut,
+              subtitle: 'Vanguard',
             ),
-            const Divider(height: 1, color: Color(0xFFE0E0E0)),
+            const Divider(height: 0, color: Color(0xFFE0E0E0)),
             Expanded(child: _buildBody()),
           ],
         ),

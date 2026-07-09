@@ -1,23 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../debug/typography.dart';
+import '../section_labels.dart';
 import '../services/bookmarks.dart';
 import 'article_screen.dart';
 
 /// Locally saved (bookmarked) articles.
 class SavedScreen extends StatelessWidget {
   const SavedScreen({super.key});
-
-  String _catLabel(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'news-features':
-        return 'News';
-      case 'arts-entertainment':
-        return 'Arts';
-      default:
-        return cat;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +65,7 @@ class SavedScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _catLabel(item['category'] as String? ?? '')
+                              sectionName(item['category'] as String? ?? '')
                                   .toUpperCase(),
                               style: const TextStyle(
                                 fontSize: 10,

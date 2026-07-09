@@ -9,6 +9,10 @@ class Article {
   final String contentInfo;
   final String content;
 
+  /// Short summary shown on the large front-page cards. Sourced from the
+  /// `blurb` column (not yet populated) — falls back to placeholder text.
+  final String blurb;
+
   Article({
     required this.id,
     required this.title,
@@ -19,6 +23,7 @@ class Article {
     required this.img,
     this.contentInfo = '',
     this.content = '',
+    this.blurb = '',
   });
 
   /// Public web page for this article on towerphs.com.
@@ -43,6 +48,7 @@ class Article {
       img: img,
       contentInfo: contentInfo,
       content: content ?? this.content,
+      blurb: blurb,
     );
   }
 
@@ -57,6 +63,7 @@ class Article {
       img: map['img'] as String? ?? '',
       contentInfo: map['content-info'] as String? ?? '',
       content: map['content'] as String? ?? '',
+      blurb: map['blurb'] as String? ?? '',
     );
   }
 }

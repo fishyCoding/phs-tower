@@ -27,8 +27,37 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_native_splash: ^2.4.1
+  flutter_launcher_icons: ^0.14.1
+  image: ^4.2.0
 
 flutter:
   uses-material-design: true
   assets:
     - lib/home_layout.txt
+    - assets/Logo.PNG
+  fonts:
+    - family: Canterbury
+      fonts:
+        - asset: assets/fonts/Canterbury.ttf
+
+# Native launch screen (shown before Flutter starts). White + the Tower logo,
+# replacing the default Flutter logo. Regenerate with:
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/Logo.PNG
+  android_12:
+    color: "#ffffff"
+    # Android 12 masks the splash icon to a circle — use the padded version so
+    # the logo isn't clipped. Regenerate assets/logo_icon.png via tool/make_icon.dart.
+    image: assets/logo_icon.png
+
+# Home-screen launcher icon = the Tower logo (padded to fit the adaptive/circle
+# mask). Regenerate with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/logo_icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/logo_icon.png"
