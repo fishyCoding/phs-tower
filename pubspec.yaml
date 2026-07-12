@@ -36,6 +36,7 @@ flutter:
   assets:
     - lib/home_layout.txt
     - assets/Logo.PNG
+    - assets/wood.jpg
   fonts:
     - family: Canterbury
       fonts:

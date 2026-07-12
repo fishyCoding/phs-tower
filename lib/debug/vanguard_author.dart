@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -34,7 +35,9 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
   Matrix4 _startMatrix = Matrix4.identity();
   Offset _startFocal = Offset.zero;
   Size _viewport = Size.zero;
-  bool _fitted = false;
+  // The viewport size the page was last fit to — re-fit when it changes
+  // (e.g. on rotation) or on page switch (reset to zero).
+  Size _fittedFor = Size.zero;
 
   static const _blue = Color(0xFF072636);
 
@@ -73,7 +76,7 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
   void _selectPage(int i) {
     setState(() {
       _current = i;
-      _fitted = false;
+      _fittedFor = Size.zero; // force a re-fit for the new page
     });
   }
 
@@ -187,148 +190,224 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
   }
 
   Widget _buildAuthor() {
-    return Column(
-      children: [
-        if (_pages!.length > 1)
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+    final landscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final chips = _pages!.length > 1 ? _pageChips() : null;
+
+    if (landscape) {
+      // Canvas on the left, stops panel down the right side.
+      return Row(
+        children: [
+          Expanded(
+            child: Column(
               children: [
-                for (var i = 0; i < _pages!.length; i++)
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(right: 8, top: 6, bottom: 6),
-                    child: ChoiceChip(
-                      label: Text('Page ${i + 1}  (${_stops[i].length})'),
-                      selected: _current == i,
-                      onSelected: (_) => _selectPage(i),
-                    ),
-                  ),
+                if (chips != null) chips,
+                Expanded(child: _canvas()),
               ],
             ),
           ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              _viewport = Size(constraints.maxWidth, constraints.maxHeight);
-              if (!_fitted && _viewport != Size.zero) {
-                _fitted = true;
-                _matrix =
-                    overviewCamera(_viewport, _pageSize).toMatrix(_viewport);
-              }
-              return Container(
-                color: Colors.black,
-                child: Stack(
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onScaleStart: _onScaleStart,
-                      onScaleUpdate: _onScaleUpdate,
-                      child: ClipRect(
-                        child: Transform(
-                          transform: _matrix,
-                          child: SizedBox(
-                            width: _pageSize.width,
-                            height: _pageSize.height,
-                            child: Image.memory(_pages![_current].bytes,
-                                fit: BoxFit.fill, gaplessPlayback: true),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 12,
-                      bottom: 12,
-                      child: Column(
-                        children: [
-                          _RoundBtn(
-                              icon: Icons.rotate_left,
-                              onTap: () => _rotate90(-1)),
-                          const SizedBox(height: 10),
-                          _RoundBtn(
-                              icon: Icons.rotate_right,
-                              onTap: () => _rotate90(1)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+          Container(
+            width: 300,
+            decoration: const BoxDecoration(
+              border: Border(left: BorderSide(color: Color(0xFFE0E0E0))),
+            ),
+            child: _stopsPanel(),
           ),
-        ),
+        ],
+      );
+    }
+
+    // Portrait: canvas fills, stops panel across the bottom.
+    return Column(
+      children: [
+        if (chips != null) chips,
+        Expanded(child: _canvas()),
         Container(
           height: 176,
           decoration: const BoxDecoration(
             border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
           ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: Row(
-                  children: [
-                    Text('Stops on page ${_current + 1}',
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    const Text('tap = preview · drag = reorder',
-                        style: TextStyle(
-                            fontSize: 11, color: Color(0xFF999999))),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: _stops[_current].isEmpty
-                    ? const Center(
-                        child: Text('Frame a region, then tap "Add stop".',
-                            style: TextStyle(
-                                fontSize: 12, color: Color(0xFF999999))),
-                      )
-                    : ReorderableListView.builder(
-                        itemCount: _stops[_current].length,
-                        onReorderItem: (oldIndex, newIndex) {
-                          setState(() {
-                            final s = _stops[_current].removeAt(oldIndex);
-                            _stops[_current].insert(newIndex, s);
-                          });
-                        },
-                        itemBuilder: (context, i) {
-                          final s = _stops[_current][i];
-                          return ListTile(
-                            key: ValueKey('s-$_current-$i-${s.hashCode}'),
-                            dense: true,
-                            leading: CircleAvatar(
-                              radius: 12,
-                              backgroundColor: _blue,
-                              child: Text('${i + 1}',
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.white)),
-                            ),
-                            title: Text(
-                              'c ${_r(s.cx)},${_r(s.cy)}  '
-                              'h ${_r(s.hw)}×${_r(s.hh)}  ${_deg(s.rot)}°',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            onTap: () => _previewStop(s),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 18, color: Color(0xFFA31621)),
-                              onPressed: () => setState(
-                                  () => _stops[_current].removeAt(i)),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+          child: _stopsPanel(),
         ),
       ],
     );
   }
+
+  Widget _pageChips() => SizedBox(
+        height: 48,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          children: [
+            for (var i = 0; i < _pages!.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
+                child: ChoiceChip(
+                  label: Text('Page ${i + 1}  (${_stops[i].length})'),
+                  selected: _current == i,
+                  onSelected: (_) => _selectPage(i),
+                ),
+              ),
+          ],
+        ),
+      );
+
+  Widget _canvas() => LayoutBuilder(
+        builder: (context, constraints) {
+          _viewport = Size(constraints.maxWidth, constraints.maxHeight);
+          if (_viewport != _fittedFor && _viewport != Size.zero) {
+            _fittedFor = _viewport;
+            _matrix = overviewCamera(_viewport, _pageSize).toMatrix(_viewport);
+          }
+          return Container(
+            color: Colors.black,
+            child: Stack(
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: _onScaleUpdate,
+                  child: ClipRect(
+                    // OverflowBox → the page lays out at its full intrinsic
+                    // size (not clamped to the canvas), so the camera matrix and
+                    // captureStop share the same 1682×2600 image space the
+                    // reader uses. Without this the SizedBox is squeezed to the
+                    // canvas and every captured stop is shrunk toward (0,0).
+                    child: OverflowBox(
+                      alignment: Alignment.topLeft,
+                      minWidth: 0,
+                      minHeight: 0,
+                      maxWidth: double.infinity,
+                      maxHeight: double.infinity,
+                      child: Transform(
+                        transform: _matrix,
+                        child: SizedBox(
+                          width: _pageSize.width,
+                          height: _pageSize.height,
+                          child: Image.memory(_pages![_current].bytes,
+                              fit: BoxFit.fill, gaplessPlayback: true),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: Column(
+                    children: [
+                      _RoundBtn(
+                          icon: Icons.rotate_left,
+                          onTap: () => _rotate90(-1)),
+                      const SizedBox(height: 10),
+                      _RoundBtn(
+                          icon: Icons.rotate_right,
+                          onTap: () => _rotate90(1)),
+                    ],
+                  ),
+                ),
+                if (kDebugMode && _viewport != Size.zero)
+                  Positioned(left: 8, top: 8, child: _authorHud()),
+              ],
+            ),
+          );
+        },
+      );
+
+  /// Debug: live readout of the page size and what [captureStop] would record
+  /// for the current framing — so author-side numbers can be compared with the
+  /// reader's HUD to catch a page-dimension / normalization mismatch.
+  Widget _authorHud() {
+    final s = captureStop(_matrix, _viewport, _pageSize.width);
+    final text = 'page ${_pageSize.width.toStringAsFixed(0)}×'
+        '${_pageSize.height.toStringAsFixed(0)}\n'
+        'view ${_viewport.width.toStringAsFixed(0)}×'
+        '${_viewport.height.toStringAsFixed(0)}\n'
+        'cx ${s.cx.toStringAsFixed(3)}  cy ${s.cy.toStringAsFixed(3)}\n'
+        'hw ${s.hw.toStringAsFixed(3)}  hh ${s.hh.toStringAsFixed(3)}\n'
+        'rot ${(s.rot * 57.29578).toStringAsFixed(0)}°';
+    return IgnorePointer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(text,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                height: 1.35,
+                fontFamily: 'monospace')),
+      ),
+    );
+  }
+
+  Widget _stopsPanel() => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                Text('Stops on page ${_current + 1}',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                const Text('tap · drag',
+                    style:
+                        TextStyle(fontSize: 11, color: Color(0xFF999999))),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _stops[_current].isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('Frame a region, then tap "Add stop".',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 12, color: Color(0xFF999999))),
+                    ),
+                  )
+                : ReorderableListView.builder(
+                    itemCount: _stops[_current].length,
+                    onReorderItem: (oldIndex, newIndex) {
+                      setState(() {
+                        final s = _stops[_current].removeAt(oldIndex);
+                        _stops[_current].insert(newIndex, s);
+                      });
+                    },
+                    itemBuilder: (context, i) {
+                      final s = _stops[_current][i];
+                      return ListTile(
+                        key: ValueKey('s-$_current-$i-${s.hashCode}'),
+                        dense: true,
+                        leading: CircleAvatar(
+                          radius: 12,
+                          backgroundColor: _blue,
+                          child: Text('${i + 1}',
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.white)),
+                        ),
+                        title: Text(
+                          'c ${_r(s.cx)},${_r(s.cy)}  '
+                          'h ${_r(s.hw)}×${_r(s.hh)}  ${_deg(s.rot)}°',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        onTap: () => _previewStop(s),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              size: 18, color: Color(0xFFA31621)),
+                          onPressed: () =>
+                              setState(() => _stops[_current].removeAt(i)),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
 }
 
 class _RoundBtn extends StatelessWidget {

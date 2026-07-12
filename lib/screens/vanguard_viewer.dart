@@ -10,9 +10,6 @@ import '../vanguard/camera.dart';
 import '../vanguard/pdf_pages.dart';
 import '../widgets/shimmer.dart';
 
-/// Light letterbox background for the reader (matches the app's light theme).
-const Color _kReaderBg = Color(0xFFEAEAEA);
-
 /// Fullscreen reader for a Vanguard spread (a 2-page print PDF).
 ///
 /// If the spread has an authored camera path, the camera visits each stop in
@@ -218,7 +215,7 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kReaderBg,
+      backgroundColor: const Color(0xFF5C4326), // wood-brown fallback
       body: CallbackShortcuts(
         bindings: {
           const SingleActivator(LogicalKeyboardKey.arrowDown): () => _step(1),
@@ -247,6 +244,11 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
                       (_guided && !_freeMode) ? _onDragEnd : null,
                   child: Stack(
                     children: [
+                      // Wooden desk the pages lie on.
+                      Positioned.fill(
+                        child: Image.asset('assets/wood.jpg',
+                            fit: BoxFit.cover),
+                      ),
                       _buildContent(),
                       _buildOverlay(),
                     ],
@@ -276,37 +278,160 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
     return _buildGuided();
   }
 
-  Widget _pageImage(int i) => SizedBox(
+  Widget _pageImage(int i) => Container(
         width: _pages![i].width,
         height: _pages![i].height,
+        // A soft drop shadow so the page reads as paper resting on the desk.
+        // (Shadow is in image space, so it scales with the zoom — subtle at the
+        // overview, out of frame when zoomed into a paragraph.)
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+                color: Color(0x66000000),
+                blurRadius: 90,
+                spreadRadius: 6,
+                offset: Offset(0, 30)),
+          ],
+        ),
         child: Image.memory(_pages![i].bytes,
             fit: BoxFit.fill, gaplessPlayback: true),
       );
 
-  // Guided mode: page layers driven by the animation controller.
+  // Guided mode: page layers driven by the animation controller. The wooden
+  // desk lives inside the same camera transform so it scrolls/zooms with the
+  // pages.
   Widget _buildGuided() {
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, _) {
         final layers = <Widget>[];
+        int markerPage;
+        VanguardCamera markerCam;
         if (_anim.isAnimating && _target != null) {
           final t = _curved.value;
           final fromE = _entries[_index];
           final toE = _entries[_target!];
           final camFrom = _fromOverride ?? _cameraOf(_index);
           final camTo = _cameraOf(_target!);
-          if (fromE.page == toE.page) {
-            layers.add(_pageLayer(
-                fromE.page, VanguardCamera.lerp(camFrom, camTo, t), 1));
+          final samePage = fromE.page == toE.page;
+          if (samePage) {
+            final cam = VanguardCamera.lerp(camFrom, camTo, t);
+            layers.add(_woodLayer(fromE.page, cam));
+            layers.add(_pageLayer(fromE.page, cam, 1));
+            markerPage = fromE.page;
+            markerCam = cam;
           } else {
+            // The desk follows the destination framing (its motion is hidden
+            // behind the opaque pages during the crossfade).
+            layers.add(_woodLayer(toE.page, camTo));
             layers.add(_pageLayer(fromE.page, camFrom, 1 - t));
             layers.add(_pageLayer(toE.page, camTo, t));
+            markerPage = toE.page;
+            markerCam = camTo;
           }
         } else {
-          layers.add(_pageLayer(_entries[_index].page, _cameraOf(_index), 1));
+          final cam = _cameraOf(_index);
+          layers.add(_woodLayer(_entries[_index].page, cam));
+          layers.add(_pageLayer(_entries[_index].page, cam, 1));
+          markerPage = _entries[_index].page;
+          markerCam = cam;
         }
+        if (kDebugMode) layers.add(_debugStopsLayer(markerPage, markerCam));
         return Stack(children: layers);
       },
+    );
+  }
+
+  /// A large tiled wooden surface, centred on the page and transformed by the
+  /// same [cam] as the page, so panning/zooming moves the desk with the paper.
+  Widget _woodLayer(int page, VanguardCamera cam) {
+    final pw = _pages![page].width;
+    final ph = _pages![page].height;
+    const k = 4.0; // desk extends well beyond the page on every side
+    final ww = pw * k;
+    final wh = ph * k;
+    return Positioned.fill(
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: 0,
+          minHeight: 0,
+          maxWidth: double.infinity,
+          maxHeight: double.infinity,
+          child: Transform(
+            transform: cam.toMatrix(_viewport),
+            child: Transform.translate(
+              offset: Offset(-(ww - pw) / 2, -(wh - ph) / 2),
+              child: Container(
+                width: ww,
+                height: wh,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/wood.jpg'),
+                    repeat: ImageRepeat.repeat,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Debug: numbered red dots at each stop's centre on [page], transformed by
+  /// the same [cam] as the page. At a stop, that stop's dot should sit exactly
+  /// at the screen centre.
+  Widget _debugStopsLayer(int page, VanguardCamera cam) {
+    final path = widget.spread.cameraPath;
+    if (path == null || page >= path.length) return const SizedBox.shrink();
+    final pw = _pages![page].width;
+    final ph = _pages![page].height;
+    final stops = path[page];
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            minWidth: 0,
+            minHeight: 0,
+            maxWidth: double.infinity,
+            maxHeight: double.infinity,
+            child: Transform(
+              transform: cam.toMatrix(_viewport),
+              child: SizedBox(
+                width: pw,
+                height: ph,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var j = 0; j < stops.length; j++)
+                      Positioned(
+                        left: stops[j].cx * pw - 45,
+                        top: stops[j].cy * pw - 45,
+                        child: Container(
+                          width: 90,
+                          height: 90,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: Color(0x88FF0000),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text('${j + 1}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 52,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -336,11 +461,14 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
   Widget _buildFree() {
     final contentWidth =
         _pages!.map((p) => p.width).reduce((a, b) => a > b ? a : b);
+    final contentHeight =
+        _pages!.fold<double>(0, (s, p) => s + p.height);
     if (!_freeInit && _viewport != Size.zero) {
       _freeInit = true;
       final scale = _viewport.width / contentWidth;
       _freeController.value = Matrix4.identity()..scaleByDouble(scale, scale, scale, 1);
     }
+    const k = 3.0;
     return ClipRect(
       child: InteractiveViewer(
         transformationController: _freeController,
@@ -348,11 +476,32 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
         boundaryMargin: const EdgeInsets.all(double.infinity),
         minScale: 0.05,
         maxScale: 6.0,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        // Stack sizes to the pages column; the wooden desk extends around it
+        // (Clip.none) and pans/zooms with it.
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            for (var i = 0; i < _pages!.length; i++) _pageImage(i),
+            Positioned(
+              left: -contentWidth * (k - 1) / 2,
+              top: -contentHeight * (k - 1) / 2,
+              width: contentWidth * k,
+              height: contentHeight * k,
+              child: Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/wood.jpg'),
+                    repeat: ImageRepeat.repeat,
+                  ),
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < _pages!.length; i++) _pageImage(i),
+              ],
+            ),
           ],
         ),
       ),
@@ -409,7 +558,41 @@ class _VanguardViewerScreenState extends State<VanguardViewerScreen>
             bottom: 24,
             child: Center(child: _bottomPill()),
           ),
+          if (kDebugMode && _pages != null && _entries.isNotEmpty)
+            Positioned(left: 8, top: 56, child: _debugHud()),
         ],
+      ),
+    );
+  }
+
+  /// Debug-only readout of the active stop + page/viewport dimensions so the
+  /// reader's numbers can be compared against what was authored.
+  Widget _debugHud() {
+    final e = _entries[(_target ?? _index).clamp(0, _entries.length - 1)];
+    final pageW = _pages![e.page].width;
+    final pageH = _pages![e.page].height;
+    final s = e.stop;
+    final text = 'page ${e.page}  ${pageW.toStringAsFixed(0)}×'
+        '${pageH.toStringAsFixed(0)}\n'
+        'view ${_viewport.width.toStringAsFixed(0)}×'
+        '${_viewport.height.toStringAsFixed(0)}\n'
+        '${s == null ? 'OVERVIEW' : 'cx ${s.cx.toStringAsFixed(3)}  '
+            'cy ${s.cy.toStringAsFixed(3)}\n'
+            'hw ${s.hw.toStringAsFixed(3)}  hh ${s.hh.toStringAsFixed(3)}\n'
+            'rot ${(s.rot * 57.29578).toStringAsFixed(0)}°'}';
+    return IgnorePointer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(text,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                height: 1.35,
+                fontFamily: 'monospace')),
       ),
     );
   }
@@ -508,7 +691,8 @@ class _PillButton extends StatelessWidget {
   }
 }
 
-/// Animated page-shaped shimmer shown while a spread's PDF renders.
+/// A shimmering newspaper-page skeleton (kicker, headline, photo, text lines)
+/// on a white sheet with a drop shadow — shown while a spread's PDF renders.
 class _VanguardLoading extends StatelessWidget {
   const _VanguardLoading();
 
@@ -517,26 +701,69 @@ class _VanguardLoading extends StatelessWidget {
     return Center(
       child: LayoutBuilder(
         builder: (context, c) {
-          // A portrait page silhouette, sized to the viewport.
-          final w = (c.maxWidth * 0.6).clamp(120.0, 520.0);
-          final h = (c.maxHeight * 0.7).clamp(160.0, 900.0);
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Shimmer(
-                child: Container(
-                  width: w,
-                  height: h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+          // Portrait page silhouette that fits within the viewport.
+          var pw = (c.maxWidth * 0.66).clamp(150.0, 440.0);
+          var ph = pw * 1.3;
+          if (ph > c.maxHeight * 0.84) {
+            ph = c.maxHeight * 0.84;
+            pw = ph / 1.3;
+          }
+          final pad = pw * 0.09;
+          final contentW = pw - pad * 2;
+
+          Widget bar(double widthFactor, double height) => Container(
+                width: contentW * widthFactor,
+                height: height,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDBDBDB),
+                  borderRadius: BorderRadius.circular(3),
                 ),
+              );
+
+          return Container(
+            width: pw,
+            height: ph,
+            padding: EdgeInsets.all(pad),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x59000000),
+                    blurRadius: 34,
+                    spreadRadius: 2,
+                    offset: Offset(0, 16)),
+              ],
+            ),
+            child: Shimmer(
+              base: const Color(0xFFD8D8D8),
+              highlight: const Color(0xFFEFEFEF),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  bar(0.32, 10), // kicker
+                  const SizedBox(height: 14),
+                  bar(1.0, 18), // headline
+                  const SizedBox(height: 7),
+                  bar(0.68, 18),
+                  const SizedBox(height: 18),
+                  // Photo block.
+                  Container(
+                    width: contentW,
+                    height: ph * 0.26,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDBDBDB),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  for (final f in const [1.0, 0.97, 1.0, 0.92, 1.0, 0.5]) ...[
+                    bar(f, 8),
+                    const SizedBox(height: 9),
+                  ],
+                ],
               ),
-              const SizedBox(height: 18),
-              const Text('Loading spread…',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF888888))),
-            ],
+            ),
           );
         },
       ),
