@@ -24,6 +24,25 @@
 		<string>????</string>
 		<key>CFBundleVersion</key>
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
+		<!-- Google Sign-In: iOS OAuth client ID. The google_sign_in plugin reads
+		     this so we don't need to pass clientId in Dart (which would break
+		     Android). Must match the "iOS" OAuth client in Google Cloud for
+		     bundle id org.princetonk12.phstower. -->
+		<key>GIDClientID</key>
+		<string>452482738574-ekrdo2g80dmtnapfa9b545cic8f7il69.apps.googleusercontent.com</string>
+		<!-- Reversed iOS client ID, so Google's OAuth screen can redirect back
+		     into the app. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.452482738574-ekrdo2g80dmtnapfa9b545cic8f7il69</string>
+				</array>
+			</dict>
+		</array>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>UIApplicationSceneManifest</key>
