@@ -2,19 +2,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../models/article.dart';
 import '../screens/article_screen.dart';
+import '../section_labels.dart';
 import '../debug/typography.dart';
-
-// ── Category helpers ──────────────────────────────────────────────────────────
-
-String _catLabel(String cat) {
-  switch (cat.toLowerCase()) {
-    case 'news-features': return 'News';
-    case 'arts-entertainment': return 'Arts';
-    case 'sports': return 'Sports';
-    case 'opinions': return 'Opinions';
-    default: return cat;
-  }
-}
 
 String _minuteRead(String text) {
   if (text.trim().isEmpty) return '';
@@ -23,18 +12,16 @@ String _minuteRead(String text) {
   return '$minutes min read';
 }
 
-String _capitalizeFirstLine(String s) {
-  final lines = s
-      .split('\n')
-      .map((l) => l.trim())
-      .where((l) => l.isNotEmpty)
-      .toList();
-  if (lines.isEmpty) return '';
-  lines[0] = lines[0].replaceAllMapped(
+/// The first line of a caption (up to the first line break), word-capitalized.
+/// Used as a bold lead-in on hero cards; the rest of the caption is dropped.
+String _captionFirstLine(String s) {
+  final nl = s.indexOf('\n');
+  final line = (nl >= 0 ? s.substring(0, nl) : s).trim();
+  if (line.isEmpty) return '';
+  return line.replaceAllMapped(
     RegExp(r'\S+'),
     (m) => '${m[0]![0].toUpperCase()}${m[0]!.substring(1)}',
   );
-  return lines.join('\n');
 }
 
 // ── Shared palette (from the home-feed design) ────────────────────────────────
@@ -46,6 +33,11 @@ const _cardBorder = Color(0xFFE3E8F2); // outline-variant tint
 const _meta = Color(0xFF666666); // on-surface-variant
 const _dot = Color(0xFFBFC4CF); // separator dot
 
+// Placeholder blurb until the `blurb` column is populated.
+const _loremBlurb =
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod '
+    'tempor incididunt ut labore et dolore magna aliqua.';
+
 /// Eyebrow category label — a filled red box with white text (the editorial
 /// kicker). Pass [boxed] = false for a plain coloured label, e.g. white text
 /// on the blue side-scroll boxes.
@@ -55,7 +47,7 @@ Widget _eyebrow(String category,
     bool boxed = true,
     Color color = Colors.white}) {
   final label = Text(
-    _catLabel(category).toUpperCase(),
+    sectionName(category).toUpperCase(),
     style: TextStyle(
       fontSize: size,
       fontWeight: FontWeight.w700,
@@ -138,6 +130,16 @@ class HeroArticleCard extends StatelessWidget {
               article.title,
               style: headline(context, size: 32, color: _ink),
             ),
+            const SizedBox(height: 8),
+            // Two-sentence blurb from the `blurb` column (placeholder for now).
+            Text(
+              article.blurb.isNotEmpty ? article.blurb : _loremBlurb,
+              style: const TextStyle(
+                fontSize: 14.5,
+                height: 1.45,
+                color: Color(0xFF555555),
+              ),
+            ),
             const SizedBox(height: 12),
             // Author · read-time meta line
             _metaLine(article),
@@ -171,16 +173,17 @@ class HeroArticleCard extends StatelessWidget {
                           )
                         : _placeholder(null),
                   ),
-                  if (article.contentInfo.isNotEmpty)
+                  if (_captionFirstLine(article.contentInfo).isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.all(18),
                       child: Text(
-                        _capitalizeFirstLine(article.contentInfo),
+                        // Only the first line of the caption, bold + upright.
+                        _captionFirstLine(article.contentInfo),
                         style: const TextStyle(
                           fontSize: 12.5,
-                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w700,
                           color: _meta,
-                          height: 1.6,
+                          height: 1.5,
                         ),
                       ),
                     ),

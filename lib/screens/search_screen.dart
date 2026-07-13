@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/article.dart';
 import '../screens/article_screen.dart';
+import '../section_labels.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -74,14 +75,6 @@ class SearchScreenState extends State<SearchScreen> {
         _error = e.toString();
         _loading = false;
       });
-    }
-  }
-
-  String _catLabel(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'news-features': return 'News';
-      case 'arts-entertainment': return 'Arts';
-      default: return cat;
     }
   }
 
@@ -263,7 +256,7 @@ class SearchScreenState extends State<SearchScreen> {
                                                     BorderRadius.circular(4),
                                               ),
                                               child: Text(
-                                                _catLabel(article.category)
+                                                sectionName(article.category)
                                                     .toUpperCase(),
                                                 style: const TextStyle(
                                                   fontSize: 10,

@@ -6,7 +6,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/article.dart';
 import '../widgets/article_card.dart';
 import '../screens/article_screen.dart';
-import '../screens/saved_screen.dart';
+import '../section_labels.dart';
+import '../widgets/tower_masthead.dart';
 import '../debug/typography.dart';
 
 class NewsScreen extends StatefulWidget {
@@ -117,7 +118,8 @@ class NewsScreenState extends State<NewsScreen> {
     try {
       var query = Supabase.instance.client
           .from('article')
-          .select('id, title, authors, month, year, category, img, content-info')
+          .select(
+              'id, title, authors, month, year, category, img, content-info, blurb')
           .eq('published', true);
 
       if (_selectedCategory != 'All') {
@@ -275,111 +277,12 @@ class NewsScreenState extends State<NewsScreen> {
   }
 
   Widget _buildMasthead() {
-    final user = widget.user;
-    return Container(
-      color: Colors.white,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Centered title + subtitle
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'The Tower',
-                style: headline(context, size: 28, color: Colors.black),
-              ),
-              if (_selectedCategory != 'All') ...[
-                const SizedBox(height: 4),
-                Text(
-                  _selectedCategory.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.4,
-                    color: Color(0xFF999999),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          // Saved articles top-left
-          Positioned(
-            left: 0,
-            top: 0,
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SavedScreen()),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(Icons.bookmark_border,
-                    size: 22, color: Color(0xFF072636)),
-              ),
-            ),
-          ),
-          // Sign-in button top-right
-          Positioned(
-            right: 0,
-            top: 0,
-            child: GestureDetector(
-              onTap: user != null ? widget.onSignOut : widget.onSignIn,
-              child: user != null
-                  ? CircleAvatar(
-                      radius: 16,
-                      backgroundImage: user.photoUrl != null
-                          ? NetworkImage(user.photoUrl!)
-                          : null,
-                      backgroundColor: const Color(0xFF072636),
-                      child: user.photoUrl == null
-                          ? Text(
-                              (user.displayName ?? user.email)[0].toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : null,
-                    )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFDDDDDD)),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.network(
-                            'https://www.google.com/favicon.ico',
-                            width: 14,
-                            height: 14,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.login,
-                              size: 14,
-                              color: Color(0xFF072636),
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          const Text(
-                            'Sign in',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF072636),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
+    return TowerMasthead(
+      user: widget.user,
+      onSignIn: widget.onSignIn,
+      onSignOut: widget.onSignOut,
+      subtitle:
+          _selectedCategory == 'All' ? null : sectionName(_selectedCategory),
     );
   }
 
@@ -603,17 +506,10 @@ class _ArticleListTile extends StatefulWidget {
 class _ArticleListTileState extends State<_ArticleListTile> {
   bool _imgFailed = false;
 
-  String _catLabel(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'news-features': return 'News';
-      case 'arts-entertainment': return 'Arts';
-      default: return cat;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    const imgSize = 90.0;
+    const imgW = 120.0;
+    const imgH = 132.0;
     final rawImg = widget.article.img.trim();
     final showImg = rawImg.isNotEmpty && !_imgFailed;
 
@@ -638,7 +534,7 @@ class _ArticleListTileState extends State<_ArticleListTile> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        _catLabel(widget.article.category).toUpperCase(),
+                        sectionName(widget.article.category).toUpperCase(),
                         style: const TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
@@ -671,17 +567,17 @@ class _ArticleListTileState extends State<_ArticleListTile> {
             ),
             // Thumbnail — only if image loaded successfully
             if (showImg) ...[
-              const SizedBox(width: 18),
+              const SizedBox(width: 14),
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
                 child: CachedNetworkImage(
                   imageUrl: rawImg,
-                  width: imgSize,
-                  height: imgSize,
-                  // Decode at roughly display resolution instead of full-res so
-                  // each thumbnail holds a small bitmap, not several MB.
-                  memCacheWidth: 270,
-                  memCacheHeight: 270,
+                  width: imgW,
+                  height: imgH,
+                  // Downscale the decode by width only — setting both dims
+                  // resizes to an exact size and distorts aspect. BoxFit.cover
+                  // then crops the aspect-correct image into the box.
+                  memCacheWidth: 360,
                   fit: BoxFit.cover,
                   placeholder: (_, __) =>
                       Container(color: const Color(0xFFF0F0F0)),

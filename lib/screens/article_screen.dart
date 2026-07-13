@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../debug/typography.dart';
+import '../section_labels.dart';
 import '../services/bookmarks.dart';
 
 /// Byline for a raw article map, falling back to the masthead when no authors
@@ -73,15 +74,6 @@ class _ArticleScreenState extends State<ArticleScreen> {
     } catch (_) {}
   }
 
-  String _catLabel(String cat) {
-    switch (cat.toLowerCase()) {
-      case 'news-features': return 'News';
-      case 'arts-entertainment': return 'Arts';
-      case 'sports': return 'Sports';
-      case 'opinions': return 'Opinions';
-      default: return cat;
-    }
-  }
 
   static const _ink = Color(0xFF000000); // body & headline text — black
   static const _link = Color(0xFF1A4E8A);
@@ -217,7 +209,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                _catLabel(_article!['category'] ?? '')
+                                sectionName(_article!['category'] ?? '')
                                     .toUpperCase(),
                                 style: const TextStyle(
                                   fontSize: 10,
@@ -269,7 +261,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
                         ),
                         ..._related.map((a) => _RelatedArticleTile(
                           article: a,
-                          catLabel: _catLabel(a['category'] ?? ''),
+                          catLabel: sectionName(a['category'] ?? ''),
                         )),
                         const SizedBox(height: 24),
                       ],
@@ -344,8 +336,8 @@ class _RelatedArticleTile extends StatelessWidget {
                     child: CachedNetworkImage(
                       imageUrl: img,
                       width: 72, height: 72,
+                      // Width-only decode preserves aspect; cover crops square.
                       memCacheWidth: 216,
-                      memCacheHeight: 216,
                       fit: BoxFit.cover,
                       placeholder: (_, __) =>
                           Container(color: const Color(0xFFF0F0F0)),

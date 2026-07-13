@@ -5,6 +5,8 @@ import 'screens/news_screen.dart';
 import 'screens/games_screen.dart';
 import 'screens/outreach_screen.dart';
 import 'screens/search_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/vanguard_list_screen.dart';
 import 'services/bookmarks.dart';
 import 'services/notifications.dart';
 import 'debug/typography.dart';
@@ -15,11 +17,17 @@ void main() async {
     url: 'https://yusjougmsdnhcsksadaw.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1c2pvdWdtc2RuaGNza3NhZGF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDU1NzI4NzQsImV4cCI6MTk2MTE0ODg3NH0.DHLgiswzK6Y_z5_mXAkRn1xy60zvhdb_iQH5gAyJorg',
   );
-  PaintingBinding.instance.imageCache.maximumSize = 200;
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 100 * 1024 * 1024;
+  // Keep the decoded-image cache modest so low-RAM devices don't GC-thrash.
+  PaintingBinding.instance.imageCache.maximumSize = 120;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 60 * 1024 * 1024;
   await BookmarksService.instance.load();
-  await NotificationService.init();
   runApp(const PHSTowerApp());
+
+  // Notifications init runs OneSignal registration and shows the permission
+  // prompt — do it AFTER the first frame so it never blocks startup.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    NotificationService.init();
+  });
 }
 
 class PHSTowerApp extends StatelessWidget {
@@ -45,7 +53,7 @@ class PHSTowerApp extends StatelessWidget {
           ],
         ),
       ),
-      home: const MainScreen(),
+      home: const SplashGate(child: MainScreen()),
     );
   }
 }
@@ -79,10 +87,11 @@ const _topLevelEntries = [
 
 const _newsSubEntries = [
   _NavEntry('all',           'All',      Icons.home_outlined,              _NavKind.newsSub),
-  _NavEntry('news-features', 'News-F',   Icons.article_outlined,           _NavKind.newsSub),
+  _NavEntry('news-features', 'News',     Icons.article_outlined,           _NavKind.newsSub),
   _NavEntry('opinions',      'Opinions', Icons.lightbulb_outline,          _NavKind.newsSub),
   _NavEntry('arts-entertainment', 'Arts', Icons.palette_outlined,         _NavKind.newsSub),
   _NavEntry('sports',        'Sports',   Icons.sports_basketball_outlined, _NavKind.newsSub),
+  _NavEntry('vanguard',      'Vanguard', Icons.auto_stories_outlined,      _NavKind.newsSub),
   _NavEntry('search',        'Search',   Icons.search,                     _NavKind.newsSub),
 ];
 
@@ -263,7 +272,8 @@ class _MainScreenState extends State<MainScreen>
       _topPage     = 'news';
       _newsSubPage = subId;
     });
-    if (subId != 'search') {
+    // Search and Vanguard are screens of their own, not article categories.
+    if (subId != 'search' && subId != 'vanguard') {
       final cat = subId == 'all' ? 'All' : subId;
       _newsKey.currentState?.selectCategory(cat);
     }
@@ -289,7 +299,11 @@ class _MainScreenState extends State<MainScreen>
   Widget _buildBody() {
     if (_topPage == 'news') {
       return IndexedStack(
-        index: _newsSubPage == 'search' ? 1 : 0,
+        index: _newsSubPage == 'search'
+            ? 1
+            : _newsSubPage == 'vanguard'
+                ? 2
+                : 0,
         children: [
           NewsScreen(
             key: _newsKey,
@@ -298,6 +312,11 @@ class _MainScreenState extends State<MainScreen>
             onSignOut: _handleSignOut,
           ),
           SearchScreen(key: _searchKey),
+          VanguardListScreen(
+            user: _user,
+            onSignIn: _handleSignIn,
+            onSignOut: _handleSignOut,
+          ),
         ],
       );
     }
