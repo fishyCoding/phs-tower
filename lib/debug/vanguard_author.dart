@@ -372,8 +372,11 @@ class _VanguardAuthorScreenState extends State<VanguardAuthorScreen> {
                   )
                 : ReorderableListView.builder(
                     itemCount: _stops[_current].length,
-                    onReorderItem: (oldIndex, newIndex) {
+                    onReorder: (oldIndex, newIndex) {
                       setState(() {
+                        // onReorder's newIndex assumes the item is still in the
+                        // list, so adjust when dragging downward.
+                        if (newIndex > oldIndex) newIndex -= 1;
                         final s = _stops[_current].removeAt(oldIndex);
                         _stops[_current].insert(newIndex, s);
                       });
