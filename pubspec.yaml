@@ -33,6 +33,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  config:
+    enable-swift-package-manager: false
   assets:
     - lib/home_layout.txt
     - assets/Logo.PNG

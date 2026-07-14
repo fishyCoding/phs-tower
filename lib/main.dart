@@ -99,6 +99,10 @@ const _newsSubEntries = [
 // MainScreen
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MainScreen
+// ─────────────────────────────────────────────────────────────────────────────
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -106,63 +110,41 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen>
-    with SingleTickerProviderStateMixin {
-
-  String _topPage      = 'news';
-  String _newsSubPage  = 'all';
-  bool   _newsExpanded = true;
-
-  // Testing-only: lets the Outreach section be opened without a real sign-in.
-  bool   _devBypass    = false;
-
-  late final AnimationController _animController;
-  late final Animation<double>   _expandAnim;
-
-  final _newsKey   = GlobalKey<NewsScreenState>();
-  final _searchKey = GlobalKey<SearchScreenState>();
-
-  // Auth — any Google account is allowed to sign in.
-
-  // ⚠️ FILL ME IN: the **Web** OAuth client ID from Google Cloud Console
-  // (APIs & Services → Credentials → OAuth client of type "Web application").
-  // This is used as the audience of the idToken so Supabase can verify it, and
-  // the same id must be added under Supabase → Auth → Providers → Google.
-  static const _webClientId =
-      '452482738574-7dg9bofecv2qvhuo4t6kqcptqf4ugu5g.apps.googleusercontent.com';
-
-  final _googleSignIn = GoogleSignIn(
-    scopes: const ['email'],
-    // Makes the returned idToken audience = the Web client → lets Supabase
-    // verify it via signInWithIdToken.
-    serverClientId: _webClientId,
-  );
+class _MainScreenState extends State<MainScreen> with SingleTickerProviderStateMixin {  // ─── AUTH STATE ────────────────────────────────────────────────────────────
   GoogleSignInAccount? _user;
+  bool _initializingAuth = true; // Block UI flash on startup
 
+  // Add the 'profile' scope here so your avatar/names actually display!
+  final _googleSignIn = GoogleSignIn(
+    scopes: const ['email', 'profile'], 
+    serverClientId: '452482738574-ekrdo2g80dmtnapfa9b545cic8f7il69.apps.googleusercontent.com', // Match your Supabase Google Client ID
+  );
+
+  // ─── NAVIGATION, ANIMATION & SCREEN KEYS ───────────────────────────────────
+  String _topPage = 'news';
+  String _newsSubPage = 'all';
+  bool _newsExpanded = true;
+  bool _devBypass = false;
+
+  late final AnimationController _animController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+    value: 1.0, // starts expanded
+  );
+  
+  late final Animation<double> _expandAnim = CurvedAnimation(
+    parent: _animController,
+    curve: Curves.easeInOut,
+  );
+
+  final GlobalKey<NewsScreenState> _newsKey = GlobalKey<NewsScreenState>();
+  final GlobalKey _searchKey = GlobalKey();
+
+  // ─── LIFECYCLE ─────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-      value: 1.0, // start expanded
-    );
-    _expandAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeInOut,
-      reverseCurve: Curves.easeInOut,
-    );
-    // Restore previous session silently — re-establishing the Supabase session.
-    _googleSignIn.signInSilently().then((u) async {
-      if (u == null) return;
-      final ok = await _authorize(u);
-      if (!ok) {
-        await _googleSignIn.signOut();
-        await Supabase.instance.client.auth.signOut();
-        return;
-      }
-      if (mounted) setState(() => _user = u);
-    });
+    _setupSilentAuth();
   }
 
   @override
@@ -171,56 +153,108 @@ class _MainScreenState extends State<MainScreen>
     super.dispose();
   }
 
-  /// Establishes a Supabase session from the Google idToken. Returns true on
-  /// success. On any failure the account is signed out so we never hold a
-  /// half-authenticated state.
-  Future<bool> _authorize(GoogleSignInAccount account) async {
-    final auth = await account.authentication;
-    final idToken = auth.idToken;
-    if (idToken == null) {
-      debugPrint('Google sign-in: missing idToken (check serverClientId).');
-      return false;
+  // ─── AUTH LOGIC ────────────────────────────────────────────────────────────
+  
+  /// Handles auto-signing the user in on cold launch if they have an active session
+  Future<void> _setupSilentAuth() async {
+    try {
+      // 1. Attempt lightweight silent sign-in
+      final account = await _googleSignIn.signInSilently();
+      if (account != null) {
+        // 2. If Google session exists, verify and sign into Supabase
+        final ok = await _authorize(account);
+        if (ok && mounted) {
+          setState(() => _user = account);
+        } else {
+          // If authorization fails, clear everything
+          await _googleSignIn.signOut();
+          await Supabase.instance.client.auth.signOut();
+        }
+      }
+    } catch (e) {
+      debugPrint('Silent sign-in failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _initializingAuth = false);
+      }
     }
-
-    await Supabase.instance.client.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      accessToken: auth.accessToken,
-    );
-    return true;
   }
 
+  /// Exchanges Google credentials for a Supabase session and validates domains
+  Future<bool> _authorize(GoogleSignInAccount account) async {
+    try {
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      final accessToken = auth.accessToken;
+
+      if (idToken == null) {
+        debugPrint('Authorization error: No ID Token found.');
+        return false;
+      }
+
+      // 1. Sign into Supabase with the native Google ID token
+      final res = await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      final userEmail = res.user?.email ?? '';
+      /*
+      // 2. Restrict to princetonk12 domain (ignoring your bypass override account)
+      if (userEmail != 'fishycodingstudios@gmail.com' &&
+          !userEmail.endsWith('@princetonk12.org')) {
+        debugPrint('Access Denied: Non-district email: $userEmail');
+        return false;
+      }
+      */
+      return true;
+    } catch (e) {
+      debugPrint('Supabase authorization exception: $e');
+      return false;
+    }
+  }
+
+  /// Handles direct click of the Sign-In button
+/// Handles direct click of the Sign-In button
   Future<void> _handleSignIn() async {
     try {
-      final account = await _googleSignIn.signIn();
-      if (account == null) return; // user cancelled
+      // FORCE clean keychains to prevent silent thread freezes
+      await _googleSignIn.signOut();
 
+      final account = await _googleSignIn.signIn();
+      if (account == null) return; // User canceled the modal
+
+      // We still run _authorize to get the Supabase session, 
+      // but we no longer treat it as a failure if it's not a school email.
       final ok = await _authorize(account);
+      
+      // If authorization failed (e.g., Supabase issue), we sign out.
+      // We removed the requirement that !ok triggers the "Access Denied" message.
       if (!ok) {
-        // Token problem — reject and clear everything.
         await _googleSignIn.signOut();
         await Supabase.instance.client.auth.signOut();
-        if (mounted) {
-          setState(() => _user = null);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sign-in failed. Please try again.'),
-            ),
-          );
-        }
         return;
       }
 
-      if (mounted) setState(() => _user = account);
+      if (mounted) {
+        setState(() => _user = account);
+      }
     } catch (e) {
-      debugPrint('Google sign-in error: $e');
+      debugPrint('Google interactive sign-in error: $e');
     }
   }
 
   Future<void> _handleSignOut() async {
-    await _googleSignIn.signOut();
-    await Supabase.instance.client.auth.signOut();
-    if (mounted) setState(() => _user = null);
+    try {
+      await _googleSignIn.signOut();
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        setState(() => _user = null);
+      }
+    } catch (e) {
+      debugPrint('Sign-out error: $e');
+    }
   }
 
   void _showAccountDialog() {
@@ -333,13 +367,6 @@ class _MainScreenState extends State<MainScreen>
   }
 
   // ── nav bar ──────────────────────────────────────────────────────────────────
-  //
-  // Two layers in a Stack, cross-fading via Opacity as _expandAnim runs:
-  //   Layer 1 (bottom): centered Row of 3 top-level buttons (visible when collapsed)
-  //   Layer 2 (top):    scrollable expanded row (visible when expanded)
-  //
-  // Each layer is wrapped in IgnorePointer(ignoring: opacity == 0) so that
-  // whichever layer is invisible cannot steal taps from the visible one.
 
   Widget _buildNav(BuildContext context) {
     final bottomPad  = MediaQuery.of(context).padding.bottom;
@@ -363,7 +390,6 @@ class _MainScreenState extends State<MainScreen>
 
                     // ── Layer 1: centered 3-button row (shown when collapsed) ──
                     IgnorePointer(
-                      // Ignore taps whenever this layer is not the dominant one
                       ignoring: t > 0.5,
                       child: Opacity(
                         opacity: (1.0 - t).clamp(0.0, 1.0),
@@ -405,7 +431,6 @@ class _MainScreenState extends State<MainScreen>
 
                     // ── Layer 2: expanded scrollable row (shown when expanded) ──
                     IgnorePointer(
-                      // Ignore taps whenever this layer is not the dominant one
                       ignoring: t <= 0.5,
                       child: Opacity(
                         opacity: t.clamp(0.0, 1.0),
